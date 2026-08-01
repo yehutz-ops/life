@@ -1,62 +1,22 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useQuickAdd } from '../data/QuickAddContext'
 import { useStore } from '../data/StoreContext'
-
-declare global {
-  interface Window {
-    SpeechRecognition?: any
-    webkitSpeechRecognition?: any
-  }
-}
+import { useSpeechToText } from '../hooks/useSpeechToText'
 
 export default function QuickAddModal() {
   const { isOpen, close } = useQuickAdd()
   const { addInboxItem } = useStore()
   const [text, setText] = useState('')
-  const [isListening, setIsListening] = useState(false)
-  const [micError, setMicError] = useState('')
-  const recognitionRef = useRef<any>(null)
 
-  const SpeechRecognitionCtor = typeof window !== 'undefined' ? window.SpeechRecognition || window.webkitSpeechRecognition : null
+  const { isListening, error, toggle, stop } = useSpeechToText((transcript) => {
+    setText((prev) => (prev ? `${prev} ${transcript}` : transcript))
+  })
 
   useEffect(() => {
-    if (!isOpen) {
-      recognitionRef.current?.stop()
-      setIsListening(false)
-    }
+    if (!isOpen) stop()
   }, [isOpen])
 
   if (!isOpen) return null
-
-  function toggleMic() {
-    if (!SpeechRecognitionCtor) {
-      setMicError('הדפדפן הזה לא תומך בהמרת דיבור לטקסט. אפשר להקליד ידנית.')
-      return
-    }
-    if (isListening) {
-      recognitionRef.current?.stop()
-      return
-    }
-    setMicError('')
-    const recognition = new SpeechRecognitionCtor()
-    recognition.lang = 'he-IL'
-    recognition.interimResults = false
-    recognition.continuous = false
-
-    recognition.onresult = (event: any) => {
-      const transcript = event.results[0][0].transcript
-      setText((prev) => (prev ? `${prev} ${transcript}` : transcript))
-    }
-    recognition.onerror = () => {
-      setMicError('לא הצלחתי לגשת למיקרופון. ודא שנתת הרשאה לדפדפן.')
-      setIsListening(false)
-    }
-    recognition.onend = () => setIsListening(false)
-
-    recognitionRef.current = recognition
-    recognition.start()
-    setIsListening(true)
-  }
 
   function handleSubmit() {
     if (!text.trim()) return
@@ -67,9 +27,9 @@ export default function QuickAddModal() {
 
   return (
     <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50 p-4" onClick={close}>
-      <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
-        <h3 className="text-lg font-bold mb-1 text-gray-900 dark:text-gray-100">מה צריך לזכור?</h3>
-        <p className="text-sm text-gray-400 dark:text-gray-500 mb-4">
+      <div className="bg-white dark:bg-stone-900 rounded-3xl shadow-xl w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
+        <h3 className="text-lg font-bold mb-1 text-stone-900 dark:text-stone-100">מה צריך לזכור?</h3>
+        <p className="text-sm text-stone-400 dark:text-stone-500 mb-4">
           הפריט יישמר בתיבת הכניסה. אפשר לשייך אותו לתחום ולתאריך אחר כך.
         </p>
 
@@ -78,28 +38,28 @@ export default function QuickAddModal() {
           value={text}
           onChange={(e) => setText(e.target.value)}
           placeholder='למשל: "מחר לקנות מטאטא"'
-          className="w-full border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 rounded-xl p-3 text-sm mb-2 resize-none h-24 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+          className="w-full border border-stone-200 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100 rounded-xl p-3 text-sm mb-2 resize-none h-24 focus:outline-none focus:ring-2 focus:ring-amber-200"
         />
 
         <div className="flex items-center justify-between mb-4">
           <button
-            onClick={toggleMic}
+            onClick={toggle}
             className={`w-10 h-10 rounded-full flex items-center justify-center text-lg transition-colors ${
-              isListening ? 'bg-red-500 text-white animate-pulse' : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300'
+              isListening ? 'bg-amber-800 text-white animate-pulse' : 'bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-300'
             }`}
             title="הקלטה קולית"
           >
             🎤
           </button>
-          {isListening && <span className="text-xs text-red-500">מקליט... דבר עכשיו</span>}
-          {micError && <span className="text-xs text-amber-600 dark:text-amber-400">{micError}</span>}
+          {isListening && <span className="text-xs text-amber-800 dark:text-amber-400">מקליט... דבר עכשיו</span>}
+          {error && <span className="text-xs text-stone-500 dark:text-stone-400">{error}</span>}
         </div>
 
         <div className="flex gap-3">
-          <button onClick={close} className="flex-1 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-sm font-medium text-gray-600 dark:text-gray-300">
+          <button onClick={close} className="flex-1 py-2.5 rounded-xl border border-stone-200 dark:border-stone-700 text-sm font-medium text-stone-600 dark:text-stone-300">
             ביטול
           </button>
-          <button onClick={handleSubmit} className="flex-1 py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700">
+          <button onClick={handleSubmit} className="flex-1 py-2.5 rounded-xl bg-amber-800 text-white text-sm font-medium hover:bg-amber-900">
             הוספה לתיבת הכניסה
           </button>
         </div>

@@ -49,25 +49,25 @@ export default function ItemDetailModal() {
   return (
     <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50 p-4" onClick={close}>
       <div
-        className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl w-full max-w-md p-6 max-h-[90vh] overflow-y-auto"
+        className="bg-white dark:bg-stone-900 rounded-2xl shadow-xl w-full max-w-md p-6 max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
-        <h3 className="text-lg font-bold mb-4 text-gray-900 dark:text-gray-100">פרטי הפריט</h3>
+        <h3 className="text-lg font-bold mb-4 text-stone-900 dark:text-stone-100">פרטי הפריט</h3>
 
-        <label className="text-xs text-gray-500 dark:text-gray-400 block mb-1">כותרת</label>
+        <label className="text-xs text-stone-500 dark:text-stone-400 block mb-1">כותרת</label>
         <input
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          className="w-full border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 rounded-xl p-2 text-sm mb-3"
+          className="w-full border border-stone-200 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100 rounded-xl p-2 text-sm mb-3"
         />
 
         <div className="grid grid-cols-2 gap-3 mb-3">
           <div>
-            <label className="text-xs text-gray-500 dark:text-gray-400 block mb-1">תחום</label>
+            <label className="text-xs text-stone-500 dark:text-stone-400 block mb-1">תחום</label>
             <select
               value={domain}
               onChange={(e) => setDomain(e.target.value as DomainId | '')}
-              className="w-full border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 rounded-xl p-2 text-sm"
+              className="w-full border border-stone-200 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100 rounded-xl p-2 text-sm"
             >
               <option value="">📥 תיבת כניסה (לא משויך)</option>
               {domainList.map((d) => (
@@ -78,11 +78,11 @@ export default function ItemDetailModal() {
             </select>
           </div>
           <div>
-            <label className="text-xs text-gray-500 dark:text-gray-400 block mb-1">סוג</label>
+            <label className="text-xs text-stone-500 dark:text-stone-400 block mb-1">סוג</label>
             <select
               value={kind}
               onChange={(e) => setKind(e.target.value as ItemKind)}
-              className="w-full border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 rounded-xl p-2 text-sm"
+              className="w-full border border-stone-200 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100 rounded-xl p-2 text-sm"
             >
               {(Object.keys(kindLabel) as ItemKind[]).map((k) => (
                 <option key={k} value={k}>
@@ -95,26 +95,26 @@ export default function ItemDetailModal() {
 
         <div className="grid grid-cols-2 gap-3 mb-3">
           <div>
-            <label className="text-xs text-gray-500 dark:text-gray-400 block mb-1">תאריך</label>
+            <label className="text-xs text-stone-500 dark:text-stone-400 block mb-1">תאריך</label>
             <input
               type="date"
               value={date}
               onChange={(e) => setDate(e.target.value)}
-              className="w-full border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 rounded-xl p-2 text-sm"
+              className="w-full border border-stone-200 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100 rounded-xl p-2 text-sm"
             />
           </div>
           <div>
-            <label className="text-xs text-gray-500 dark:text-gray-400 block mb-1">שעה (אופציונלי)</label>
+            <label className="text-xs text-stone-500 dark:text-stone-400 block mb-1">שעה (אופציונלי)</label>
             <input
               type="time"
               value={time}
               onChange={(e) => setTime(e.target.value)}
-              className="w-full border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 rounded-xl p-2 text-sm"
+              className="w-full border border-stone-200 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100 rounded-xl p-2 text-sm"
             />
           </div>
         </div>
 
-        <label className="text-xs text-gray-500 dark:text-gray-400 block mb-1">עדיפות</label>
+        <label className="text-xs text-stone-500 dark:text-stone-400 block mb-1">עדיפות</label>
         <div className="flex gap-2 mb-3">
           {(['high', 'medium', 'low'] as Priority[]).map((p) => (
             <button
@@ -122,8 +122,8 @@ export default function ItemDetailModal() {
               onClick={() => setPriority(p)}
               className={`px-3 py-1.5 rounded-full text-xs font-medium border ${
                 priority === p
-                  ? 'bg-indigo-600 text-white border-indigo-600'
-                  : 'border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400'
+                  ? 'bg-amber-800 text-white border-amber-800'
+                  : 'border-stone-200 dark:border-stone-700 text-stone-500 dark:text-stone-400'
               }`}
             >
               {p === 'high' ? 'גבוהה' : p === 'medium' ? 'בינונית' : 'נמוכה'}
@@ -131,21 +131,21 @@ export default function ItemDetailModal() {
           ))}
         </div>
 
-        <label className="text-xs text-gray-500 dark:text-gray-400 block mb-1">הערות</label>
+        <label className="text-xs text-stone-500 dark:text-stone-400 block mb-1">הערות</label>
         <textarea
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
-          className="w-full border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 rounded-xl p-2 text-sm mb-5 h-16 resize-none"
+          className="w-full border border-stone-200 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100 rounded-xl p-2 text-sm mb-5 h-16 resize-none"
         />
 
         <div className="flex gap-3">
           <button
             onClick={close}
-            className="flex-1 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-sm font-medium text-gray-600 dark:text-gray-300"
+            className="flex-1 py-2.5 rounded-xl border border-stone-200 dark:border-stone-700 text-sm font-medium text-stone-600 dark:text-stone-300"
           >
             ביטול
           </button>
-          <button onClick={handleSave} className="flex-1 py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700">
+          <button onClick={handleSave} className="flex-1 py-2.5 rounded-xl bg-amber-800 text-white text-sm font-medium hover:bg-amber-900">
             שמור
           </button>
         </div>

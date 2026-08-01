@@ -26,10 +26,10 @@ export default function TasksPage() {
     <div className="space-y-6 pb-24">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-extrabold text-gray-900 dark:text-gray-100">משימות</h1>
-          <p className="text-gray-500 dark:text-gray-400 mt-1 text-sm">כל הפריטים המשויכים, מכל תחומי החיים</p>
+          <h1 className="text-2xl font-extrabold text-stone-900 dark:text-stone-100">משימות</h1>
+          <p className="text-stone-500 dark:text-stone-400 mt-1 text-sm">כל הפריטים המשויכים, מכל תחומי החיים</p>
         </div>
-        <button onClick={openQuickAdd} className="px-4 py-2 rounded-xl bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700">
+        <button onClick={openQuickAdd} className="px-4 py-2 rounded-xl bg-amber-800 text-white text-sm font-medium hover:bg-amber-900">
           + הוספה מהירה
         </button>
       </div>
@@ -54,14 +54,14 @@ export default function TasksPage() {
             {kindLabel[k]}
           </FilterChip>
         ))}
-        <label className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 mr-2">
-          <input type="checkbox" checked={showDone} onChange={(e) => setShowDone(e.target.checked)} className="accent-indigo-600" />
+        <label className="flex items-center gap-1.5 text-xs text-stone-500 dark:text-stone-400 mr-2">
+          <input type="checkbox" checked={showDone} onChange={(e) => setShowDone(e.target.checked)} className="accent-amber-800" />
           הצג גם הושלמו
         </label>
       </div>
 
       <Card className="!p-0 overflow-hidden">
-        <ul className="divide-y divide-gray-50 dark:divide-gray-800 px-4">
+        <ul className="divide-y divide-stone-50 dark:divide-stone-800 px-4">
           {filtered.map((it) => (
             <ItemRow key={it.id} item={it} />
           ))}

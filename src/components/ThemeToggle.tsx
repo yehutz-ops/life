@@ -16,7 +16,7 @@ export default function ThemeToggle() {
     <div className="relative">
       <button
         onClick={() => setOpen((o) => !o)}
-        className="w-9 h-9 rounded-xl border border-gray-200 dark:border-gray-700 flex items-center justify-center hover:bg-gray-50 dark:hover:bg-gray-800"
+        className="w-9 h-9 rounded-xl border border-stone-200 dark:border-stone-700 flex items-center justify-center hover:bg-stone-50 dark:hover:bg-stone-800"
         title="מצב תצוגה"
       >
         {resolvedTheme === 'dark' ? '🌙' : '☀️'}
@@ -24,7 +24,7 @@ export default function ThemeToggle() {
       {open && (
         <>
           <div className="fixed inset-0 z-30" onClick={() => setOpen(false)} />
-          <div className="absolute left-0 mt-2 w-48 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-xl shadow-lg z-40 p-1">
+          <div className="absolute left-0 mt-2 w-48 bg-white dark:bg-stone-900 border border-stone-100 dark:border-stone-800 rounded-xl shadow-lg z-40 p-1">
             {options.map((o) => (
               <button
                 key={o.value}
@@ -33,7 +33,7 @@ export default function ThemeToggle() {
                   setOpen(false)
                 }}
                 className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-right ${
-                  theme === o.value ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
+                  theme === o.value ? 'bg-amber-50 text-amber-900 dark:bg-amber-950 dark:text-amber-300' : 'text-stone-600 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-800'
                 }`}
               >
                 <span>{o.icon}</span>

@@ -26,7 +26,7 @@ export default function DomainPage({ domainId }: { domainId: DomainId }) {
           <span className="text-3xl">{domain.icon}</span>
           <h1 className={`text-2xl font-extrabold ${domain.classes.text}`}>{domain.name}</h1>
         </div>
-        <div className="flex items-center gap-6 mt-4 text-sm text-gray-700 dark:text-gray-200 flex-wrap">
+        <div className="flex items-center gap-6 mt-4 text-sm text-stone-700 dark:text-stone-200 flex-wrap">
           <span>{openCount} פתוחות</span>
           <span>{domainProjects.length} פרויקטים</span>
           <div className="flex items-center gap-2">
@@ -41,15 +41,15 @@ export default function DomainPage({ domainId }: { domainId: DomainId }) {
 
       {domainProjects.length > 0 && (
         <Card>
-          <h2 className="text-base font-bold text-gray-900 dark:text-gray-100 mb-4">פרויקטים בתחום זה</h2>
+          <h2 className="text-base font-bold text-stone-900 dark:text-stone-100 mb-4">פרויקטים בתחום זה</h2>
           <ul className="space-y-4">
             {domainProjects.map((p) => (
               <li key={p.id}>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-gray-800 dark:text-gray-100">{p.name}</span>
-                  {p.status === 'stuck' && <span className="text-xs font-medium text-red-500">תקוע</span>}
+                  <span className="text-sm font-medium text-stone-800 dark:text-stone-100">{p.name}</span>
+                  {p.status === 'stuck' && <span className="text-xs font-medium text-stone-500 dark:text-stone-400">תקוע</span>}
                 </div>
-                <div className="text-xs text-gray-400 dark:text-gray-500 mt-1 mb-2">{p.nextStep}</div>
+                <div className="text-xs text-stone-400 dark:text-stone-500 mt-1 mb-2">{p.nextStep}</div>
                 <ProgressBar value={p.progress} colorClass={domain.classes.bar} />
               </li>
             ))}
@@ -59,9 +59,9 @@ export default function DomainPage({ domainId }: { domainId: DomainId }) {
 
       <Card className="!p-0 overflow-hidden">
         <div className="p-5 pb-0">
-          <h2 className="text-base font-bold text-gray-900 dark:text-gray-100 mb-4">פריטים בתחום זה</h2>
+          <h2 className="text-base font-bold text-stone-900 dark:text-stone-100 mb-4">פריטים בתחום זה</h2>
         </div>
-        <ul className="divide-y divide-gray-50 dark:divide-gray-800 px-5">
+        <ul className="divide-y divide-stone-50 dark:divide-stone-800 px-5">
           {domainItems.map((it) => (
             <ItemRow key={it.id} item={it} showDomain={false} />
           ))}
@@ -70,8 +70,8 @@ export default function DomainPage({ domainId }: { domainId: DomainId }) {
       </Card>
 
       <Card className={`border-0 ${domain.classes.bg}`}>
-        <div className="text-sm font-bold text-gray-800 dark:text-gray-100 mb-1">בקרוב בתחום הזה</div>
-        <p className="text-sm text-gray-500 dark:text-gray-400">{domain.comingSoon}</p>
+        <div className="text-sm font-bold text-stone-800 dark:text-stone-100 mb-1">בקרוב בתחום הזה</div>
+        <p className="text-sm text-stone-500 dark:text-stone-400">{domain.comingSoon}</p>
       </Card>
     </div>
   )

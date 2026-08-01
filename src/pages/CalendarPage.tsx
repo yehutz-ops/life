@@ -51,24 +51,24 @@ export default function CalendarPage() {
   return (
     <div className="space-y-6 pb-24">
       <div>
-        <h1 className="text-2xl font-extrabold text-gray-900 dark:text-gray-100">יומן</h1>
-        <p className="text-gray-500 dark:text-gray-400 mt-1 text-sm">כל האירועים והמשימות מכל תחומי החיים, במקום אחד</p>
+        <h1 className="text-2xl font-extrabold text-stone-900 dark:text-stone-100">יומן</h1>
+        <p className="text-stone-500 dark:text-stone-400 mt-1 text-sm">כל האירועים והמשימות מכל תחומי החיים, במקום אחד</p>
       </div>
 
       <Card>
         <div className="flex items-center justify-between mb-4">
-          <button onClick={() => changeMonth(-1)} className="px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 text-sm hover:bg-gray-50 dark:hover:bg-gray-800">
+          <button onClick={() => changeMonth(-1)} className="px-3 py-1.5 rounded-lg border border-stone-200 dark:border-stone-700 text-sm hover:bg-stone-50 dark:hover:bg-stone-800">
             → הקודם
           </button>
-          <div className="font-bold text-gray-900 dark:text-gray-100">
+          <div className="font-bold text-stone-900 dark:text-stone-100">
             {monthNames[cursor.getMonth()]} {cursor.getFullYear()}
           </div>
-          <button onClick={() => changeMonth(1)} className="px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 text-sm hover:bg-gray-50 dark:hover:bg-gray-800">
+          <button onClick={() => changeMonth(1)} className="px-3 py-1.5 rounded-lg border border-stone-200 dark:border-stone-700 text-sm hover:bg-stone-50 dark:hover:bg-stone-800">
             הבא ←
           </button>
         </div>
 
-        <div className="grid grid-cols-7 text-center text-xs text-gray-400 dark:text-gray-500 mb-2">
+        <div className="grid grid-cols-7 text-center text-xs text-stone-400 dark:text-stone-500 mb-2">
           {weekdays.map((w) => (
             <div key={w}>{w}</div>
           ))}
@@ -86,12 +86,12 @@ export default function CalendarPage() {
                 key={iso}
                 onClick={() => setSelectedDate(iso)}
                 className={`aspect-square rounded-xl p-1.5 text-right flex flex-col items-start gap-1 border transition-colors ${
-                  isSelected ? 'border-indigo-400 bg-indigo-50 dark:bg-indigo-950/50' : 'border-transparent hover:bg-gray-50 dark:hover:bg-gray-800'
+                  isSelected ? 'border-amber-400 bg-amber-50 dark:bg-amber-950/50' : 'border-transparent hover:bg-stone-50 dark:hover:bg-stone-800'
                 } ${!inMonth ? 'opacity-30' : ''}`}
               >
                 <span
                   className={`text-xs ${
-                    isToday ? 'w-5 h-5 flex items-center justify-center rounded-full bg-indigo-600 text-white' : 'text-gray-600 dark:text-gray-300'
+                    isToday ? 'w-5 h-5 flex items-center justify-center rounded-full bg-amber-800 text-white' : 'text-stone-600 dark:text-stone-300'
                   }`}
                 >
                   {d.getDate()}
@@ -108,16 +108,16 @@ export default function CalendarPage() {
       </Card>
 
       <Card>
-        <h2 className="text-base font-bold text-gray-900 dark:text-gray-100 mb-3">{selectedItems.length ? `מה קורה ב-${selectedDate}` : 'אין כלום ביום הנבחר'}</h2>
-        <ul className="divide-y divide-gray-50 dark:divide-gray-800">
+        <h2 className="text-base font-bold text-stone-900 dark:text-stone-100 mb-3">{selectedItems.length ? `מה קורה ב-${selectedDate}` : 'אין כלום ביום הנבחר'}</h2>
+        <ul className="divide-y divide-stone-50 dark:divide-stone-800">
           {selectedItems.map((it) => {
             const d = getDomain(it.domain!)
             return (
               <li key={it.id} className="flex items-center justify-between py-2.5">
                 <div className="flex items-center gap-2">
                   <span className={`w-2 h-2 rounded-full ${d.classes.dot}`} />
-                  <span className="text-sm text-gray-800 dark:text-gray-100">{it.title}</span>
-                  <span className="text-xs text-gray-400 dark:text-gray-500">
+                  <span className="text-sm text-stone-800 dark:text-stone-100">{it.title}</span>
+                  <span className="text-xs text-stone-400 dark:text-stone-500">
                     · {kindIcon[it.kind]}
                     {it.time ? ` · ${it.time}` : ''}
                   </span>

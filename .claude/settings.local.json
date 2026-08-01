@@ -9,7 +9,8 @@
       "Bash(npm install *)",
       "Bash(npx tsc *)",
       "Bash(git init *)",
-      "Bash(git add *)"
+      "Bash(git add *)",
+      "Bash(git commit -m 'Checkpoint: working V1 prototype before warm/light visual redesign *)"
     ]
   }
 }

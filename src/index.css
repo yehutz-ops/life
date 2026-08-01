@@ -3,5 +3,14 @@
 @tailwind utilities;
 
 body {
-  font-family: system-ui, -apple-system, 'Segoe UI', Arial, sans-serif;
+  font-family: 'Arial Hebrew', system-ui, -apple-system, 'Segoe UI', Arial, sans-serif;
+}
+
+.font-elegant {
+  font-family: 'New Peninim MT', Georgia, 'Times New Roman', serif;
+}
+
+.warm-texture {
+  background-image: radial-gradient(circle at 1px 1px, rgba(120, 90, 60, 0.06) 1px, transparent 0);
+  background-size: 22px 22px;
 }

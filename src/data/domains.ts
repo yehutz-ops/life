@@ -5,6 +5,7 @@ export interface DomainConfig {
   name: string
   icon: string
   path: string
+  description: string
   comingSoon: string
   classes: {
     bg: string
@@ -12,6 +13,7 @@ export interface DomainConfig {
     chip: string
     dot: string
     bar: string
+    ring: string
   }
 }
 
@@ -21,13 +23,15 @@ export const domainList: DomainConfig[] = [
     name: 'עבודה',
     icon: '💼',
     path: '/work',
+    description: 'שיתופי פעולה, מותגים ותוכן',
     comingSoon: 'יוצרי תוכן ושיתופי פעולה, מותגים והשקות, מרכז תוכן, ספקים ומשלוחים, עובדים',
     classes: {
-      bg: 'bg-blue-50 dark:bg-blue-950/40',
-      text: 'text-blue-700 dark:text-blue-300',
-      chip: 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300',
-      dot: 'bg-blue-500',
-      bar: 'bg-blue-500',
+      bg: 'bg-amber-50 dark:bg-amber-950/30',
+      text: 'text-amber-800 dark:text-amber-300',
+      chip: 'bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300',
+      dot: 'bg-amber-600',
+      bar: 'bg-amber-600',
+      ring: 'ring-amber-200',
     },
   },
   {
@@ -35,13 +39,15 @@ export const domainList: DomainConfig[] = [
     name: 'לימודים',
     icon: '🎓',
     path: '/studies',
+    description: 'קורסים, מטלות ומבחנים',
     comingSoon: 'קורסים, מטלות, מבחנים, תוכנית לימוד ומעקב נקודות זכות',
     classes: {
-      bg: 'bg-purple-50 dark:bg-purple-950/40',
-      text: 'text-purple-700 dark:text-purple-300',
-      chip: 'bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-300',
-      dot: 'bg-purple-500',
-      bar: 'bg-purple-500',
+      bg: 'bg-orange-50 dark:bg-orange-950/30',
+      text: 'text-orange-800 dark:text-orange-300',
+      chip: 'bg-orange-100 text-orange-800 dark:bg-orange-900/50 dark:text-orange-300',
+      dot: 'bg-orange-600',
+      bar: 'bg-orange-600',
+      ring: 'ring-orange-200',
     },
   },
   {
@@ -49,13 +55,15 @@ export const domainList: DomainConfig[] = [
     name: 'אישי',
     icon: '👤',
     path: '/personal',
+    description: 'סידורים, משפחה ומסמכים',
     comingSoon: 'סידורים, תשלומים ומסמכים אישיים, משפחה, תהליכים בירוקרטיים',
     classes: {
-      bg: 'bg-teal-50 dark:bg-teal-950/40',
-      text: 'text-teal-700 dark:text-teal-300',
-      chip: 'bg-teal-100 text-teal-700 dark:bg-teal-900/50 dark:text-teal-300',
-      dot: 'bg-teal-500',
-      bar: 'bg-teal-500',
+      bg: 'bg-rose-50 dark:bg-rose-950/30',
+      text: 'text-rose-800 dark:text-rose-300',
+      chip: 'bg-rose-100 text-rose-800 dark:bg-rose-900/50 dark:text-rose-300',
+      dot: 'bg-rose-500',
+      bar: 'bg-rose-500',
+      ring: 'ring-rose-200',
     },
   },
   {
@@ -63,13 +71,15 @@ export const domainList: DomainConfig[] = [
     name: 'בית',
     icon: '🏠',
     path: '/household',
+    description: 'קניות, תחזוקה ותשלומים',
     comingSoon: 'רשימת קניות, תחזוקה ותיקונים, ציוד לבית, אקווריום, תשלומים הקשורים לבית',
     classes: {
-      bg: 'bg-emerald-50 dark:bg-emerald-950/40',
-      text: 'text-emerald-700 dark:text-emerald-300',
-      chip: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300',
-      dot: 'bg-emerald-500',
-      bar: 'bg-emerald-500',
+      bg: 'bg-lime-50 dark:bg-lime-950/30',
+      text: 'text-lime-800 dark:text-lime-300',
+      chip: 'bg-lime-100 text-lime-800 dark:bg-lime-900/50 dark:text-lime-300',
+      dot: 'bg-lime-600',
+      bar: 'bg-lime-600',
+      ring: 'ring-lime-200',
     },
   },
   {
@@ -77,13 +87,15 @@ export const domainList: DomainConfig[] = [
     name: 'בריאות וספורט',
     icon: '🥊',
     path: '/health',
+    description: 'אימונים ומטרות בריאות',
     comingSoon: 'יומן אימונים, מטרות אישיות ומעקב התקדמות',
     classes: {
-      bg: 'bg-rose-50 dark:bg-rose-950/40',
-      text: 'text-rose-700 dark:text-rose-300',
-      chip: 'bg-rose-100 text-rose-700 dark:bg-rose-900/50 dark:text-rose-300',
-      dot: 'bg-rose-500',
-      bar: 'bg-rose-500',
+      bg: 'bg-yellow-50 dark:bg-yellow-950/30',
+      text: 'text-yellow-800 dark:text-yellow-300',
+      chip: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300',
+      dot: 'bg-yellow-600',
+      bar: 'bg-yellow-600',
+      ring: 'ring-yellow-200',
     },
   },
   {
@@ -91,13 +103,15 @@ export const domainList: DomainConfig[] = [
     name: 'כספים',
     icon: '💰',
     path: '/finance',
+    description: 'השקעות, תשלומים ויעדים',
     comingSoon: 'מעקב השקעות, התחייבויות ותשלומים, ויעדים כספיים',
     classes: {
-      bg: 'bg-amber-50 dark:bg-amber-950/40',
-      text: 'text-amber-700 dark:text-amber-300',
-      chip: 'bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300',
-      dot: 'bg-amber-500',
-      bar: 'bg-amber-500',
+      bg: 'bg-stone-100 dark:bg-stone-800/50',
+      text: 'text-stone-700 dark:text-stone-300',
+      chip: 'bg-stone-200 text-stone-700 dark:bg-stone-700 dark:text-stone-300',
+      dot: 'bg-stone-500',
+      bar: 'bg-stone-500',
+      ring: 'ring-stone-300',
     },
   },
   {
@@ -105,13 +119,15 @@ export const domainList: DomainConfig[] = [
     name: 'פיתוח אישי ויוזמות',
     icon: '💡',
     path: '/personal-development',
+    description: 'רעיונות ופרויקטים אישיים',
     comingSoon: 'מאגר רעיונות, פרויקטים צדדיים ומטרות לטווח ארוך',
     classes: {
-      bg: 'bg-violet-50 dark:bg-violet-950/40',
-      text: 'text-violet-700 dark:text-violet-300',
-      chip: 'bg-violet-100 text-violet-700 dark:bg-violet-900/50 dark:text-violet-300',
+      bg: 'bg-violet-50 dark:bg-violet-950/30',
+      text: 'text-violet-800 dark:text-violet-300',
+      chip: 'bg-violet-100 text-violet-800 dark:bg-violet-900/50 dark:text-violet-300',
       dot: 'bg-violet-500',
       bar: 'bg-violet-500',
+      ring: 'ring-violet-200',
     },
   },
 ]
