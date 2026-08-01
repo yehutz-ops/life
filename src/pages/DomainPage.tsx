@@ -15,8 +15,8 @@ export default function DomainPage({ domainId }: { domainId: DomainId }) {
   )
   const domainProjects = projects.filter((p) => p.domain === domainId)
   const nonEvent = domainItems.filter((it) => it.kind !== 'event')
-  const openCount = nonEvent.filter((it) => it.status === 'open').length
-  const doneCount = nonEvent.length - openCount
+  const openCount = nonEvent.filter((it) => it.status !== 'done' && it.status !== 'cancelled').length
+  const doneCount = nonEvent.filter((it) => it.status === 'done').length
   const progress = nonEvent.length ? Math.round((doneCount / nonEvent.length) * 100) : 0
 
   return (
@@ -47,7 +47,7 @@ export default function DomainPage({ domainId }: { domainId: DomainId }) {
               <li key={p.id}>
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-medium text-stone-800 dark:text-stone-100">{p.name}</span>
-                  {p.status === 'stuck' && <span className="text-xs font-medium text-stone-500 dark:text-stone-400">תקוע</span>}
+                  {p.isStuck && <span className="text-xs font-medium text-stone-500 dark:text-stone-400">תקוע</span>}
                 </div>
                 <div className="text-xs text-stone-400 dark:text-stone-500 mt-1 mb-2">{p.nextStep}</div>
                 <ProgressBar value={p.progress} colorClass={domain.classes.bar} />

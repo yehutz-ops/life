@@ -7,31 +7,32 @@ import ItemRow from '../components/ItemRow'
 import DomainCard from '../components/DomainCard'
 import QuickCaptureBar from '../components/QuickCaptureBar'
 import { formatFullHebrewDate, getGreeting, todayISO } from '../utils/date'
-import { DomainId } from '../data/types'
+import { DomainId, ItemStatus } from '../data/types'
 
 const priorityWeight = { high: 0, medium: 1, low: 2 } as const
+const isActive = (status: ItemStatus) => status !== 'done' && status !== 'cancelled'
 
 export default function Home() {
-  const { items } = useStore()
+  const { items, inboxEntries } = useStore()
   const [focusDomain, setFocusDomain] = useState<DomainId | null>(null)
 
-  const inboxItems = items.filter((it) => !it.domain)
+  const pendingInbox = inboxEntries.filter((e) => e.status === 'pending')
   const today = todayISO()
 
   function domainStats(domainId: DomainId) {
     const domainItems = items.filter((it) => it.domain === domainId && it.kind !== 'event')
-    const open = domainItems.filter((it) => it.status === 'open')
+    const open = domainItems.filter((it) => isActive(it.status))
     const next = [...open].sort((a, b) => (a.date ?? '9999').localeCompare(b.date ?? '9999'))[0]
     return { openCount: open.length, next }
   }
 
-  const todayScoped = items.filter((it) => it.domain && (!focusDomain || it.domain === focusDomain))
+  const todayScoped = items.filter((it) => !focusDomain || it.domain === focusDomain)
 
   const timedToday = useMemo(
     () =>
       todayScoped
-        .filter((it) => it.date === today && it.time)
-        .sort((a, b) => a.time!.localeCompare(b.time!))
+        .filter((it) => it.date === today && it.startTime)
+        .sort((a, b) => a.startTime!.localeCompare(b.startTime!))
         .slice(0, 3),
     [items, focusDomain],
   )
@@ -39,9 +40,9 @@ export default function Home() {
   const untimedDue = useMemo(
     () =>
       todayScoped
-        .filter((it) => it.status === 'open' && it.kind !== 'event' && !it.time && it.date && it.date <= today)
+        .filter((it) => isActive(it.status) && it.kind !== 'event' && !it.startTime && it.date && it.date <= today)
         .sort(
-          (a, b) => a.date!.localeCompare(b.date!) || priorityWeight[a.priority ?? 'low'] - priorityWeight[b.priority ?? 'low'],
+          (a, b) => a.date!.localeCompare(b.date!) || priorityWeight[a.priority] - priorityWeight[b.priority],
         )
         .slice(0, 3),
     [items, focusDomain],
@@ -59,10 +60,10 @@ export default function Home() {
 
       <div className="max-w-2xl mx-auto w-full">
         <QuickCaptureBar />
-        {inboxItems.length > 0 && (
+        {pendingInbox.length > 0 && (
           <div className="flex items-center justify-center gap-2 mt-4 text-sm">
             <span className="text-stone-500 dark:text-stone-400">
-              📥 {inboxItems.length} פריטים ממתינים לסידור בתיבת הכניסה
+              📥 {pendingInbox.length} פריטים ממתינים לסידור בתיבת הכניסה
             </span>
             <Link to="/inbox" className="font-medium text-amber-800 dark:text-amber-400 underline">
               לסדר עכשיו

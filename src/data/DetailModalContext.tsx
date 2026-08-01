@@ -1,17 +1,32 @@
 import { createContext, useContext, useState, ReactNode } from 'react'
 
+export type ItemModalTarget =
+  | { mode: 'edit'; id: string }
+  | { mode: 'create'; domain?: string }
+  | { mode: 'sort'; entryId: string; prefillTitle: string }
+
 interface DetailModalValue {
-  openItemId: string | null
-  open: (id: string) => void
+  target: ItemModalTarget | null
+  openEdit: (id: string) => void
+  openCreate: (domain?: string) => void
+  openSort: (entryId: string, prefillTitle: string) => void
   close: () => void
 }
 
 const DetailModalContext = createContext<DetailModalValue | null>(null)
 
 export function DetailModalProvider({ children }: { children: ReactNode }) {
-  const [openItemId, setOpenItemId] = useState<string | null>(null)
+  const [target, setTarget] = useState<ItemModalTarget | null>(null)
   return (
-    <DetailModalContext.Provider value={{ openItemId, open: setOpenItemId, close: () => setOpenItemId(null) }}>
+    <DetailModalContext.Provider
+      value={{
+        target,
+        openEdit: (id) => setTarget({ mode: 'edit', id }),
+        openCreate: (domain) => setTarget({ mode: 'create', domain }),
+        openSort: (entryId, prefillTitle) => setTarget({ mode: 'sort', entryId, prefillTitle }),
+        close: () => setTarget(null),
+      }}
+    >
       {children}
     </DetailModalContext.Provider>
   )

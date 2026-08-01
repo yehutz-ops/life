@@ -5,11 +5,13 @@ import { useSpeechToText } from '../hooks/useSpeechToText'
 
 export default function QuickAddModal() {
   const { isOpen, close } = useQuickAdd()
-  const { addInboxItem } = useStore()
+  const { addInboxEntry } = useStore()
   const [text, setText] = useState('')
+  const [usedMic, setUsedMic] = useState(false)
 
   const { isListening, error, toggle, stop } = useSpeechToText((transcript) => {
     setText((prev) => (prev ? `${prev} ${transcript}` : transcript))
+    setUsedMic(true)
   })
 
   useEffect(() => {
@@ -18,10 +20,11 @@ export default function QuickAddModal() {
 
   if (!isOpen) return null
 
-  function handleSubmit() {
+  async function handleSubmit() {
     if (!text.trim()) return
-    addInboxItem(text.trim())
+    await addInboxEntry(text.trim(), usedMic ? 'spoken' : 'typed')
     setText('')
+    setUsedMic(false)
     close()
   }
 

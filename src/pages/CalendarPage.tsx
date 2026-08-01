@@ -23,7 +23,7 @@ export default function CalendarPage() {
   const itemsByDate = useMemo(() => {
     const map: Record<string, Item[]> = {}
     items
-      .filter((it) => it.domain && it.date && it.status !== 'done')
+      .filter((it) => it.date && it.status !== 'done' && it.status !== 'cancelled')
       .forEach((it) => {
         map[it.date!] = map[it.date!] || []
         map[it.date!].push(it)
@@ -119,7 +119,7 @@ export default function CalendarPage() {
                   <span className="text-sm text-stone-800 dark:text-stone-100">{it.title}</span>
                   <span className="text-xs text-stone-400 dark:text-stone-500">
                     · {kindIcon[it.kind]}
-                    {it.time ? ` · ${it.time}` : ''}
+                    {it.startTime ? ` · ${it.startTime}` : ''}
                   </span>
                 </div>
                 <span className={`text-xs font-medium px-2 py-1 rounded-full ${d.classes.chip}`}>{d.name}</span>

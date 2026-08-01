@@ -37,7 +37,7 @@ export function DomainBadge({ domain }: { domain?: DomainId }) {
   )
 }
 
-const priorityLabels: Record<Priority, string> = { high: 'גבוהה', medium: 'בינונית', low: 'נמוכה' }
+const priorityLabels: Record<Priority, string> = { high: 'גבוהה', medium: 'רגילה', low: 'נמוכה' }
 const priorityClasses: Record<Priority, string> = {
   high: 'bg-stone-800 text-white dark:bg-stone-200 dark:text-stone-900',
   medium: 'bg-stone-100 text-stone-600 dark:bg-stone-800 dark:text-stone-300',

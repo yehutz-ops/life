@@ -5,20 +5,21 @@ import { Card, FilterChip, kindLabel, EmptyLine } from '../components/ui'
 import ItemRow from '../components/ItemRow'
 import { DomainId, ItemKind } from '../data/types'
 import { useQuickAdd } from '../data/QuickAddContext'
+import { useDetailModal } from '../data/DetailModalContext'
 
 export default function TasksPage() {
   const { items } = useStore()
   const { open: openQuickAdd } = useQuickAdd()
+  const { openCreate } = useDetailModal()
   const [domainFilter, setDomainFilter] = useState<DomainId | 'all'>('all')
   const [kindFilter, setKindFilter] = useState<ItemKind | 'all'>('all')
   const [showDone, setShowDone] = useState(false)
 
   const filtered = useMemo(() => {
     return items
-      .filter((it) => it.domain)
       .filter((it) => domainFilter === 'all' || it.domain === domainFilter)
       .filter((it) => kindFilter === 'all' || it.kind === kindFilter)
-      .filter((it) => showDone || it.status === 'open')
+      .filter((it) => showDone || (it.status !== 'done' && it.status !== 'cancelled'))
       .sort((a, b) => (a.date ?? '9999').localeCompare(b.date ?? '9999'))
   }, [items, domainFilter, kindFilter, showDone])
 
@@ -27,11 +28,16 @@ export default function TasksPage() {
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-extrabold text-stone-900 dark:text-stone-100">משימות</h1>
-          <p className="text-stone-500 dark:text-stone-400 mt-1 text-sm">כל הפריטים המשויכים, מכל תחומי החיים</p>
+          <p className="text-stone-500 dark:text-stone-400 mt-1 text-sm">כל הפריטים, מכל תחומי החיים</p>
         </div>
-        <button onClick={openQuickAdd} className="px-4 py-2 rounded-xl bg-amber-800 text-white text-sm font-medium hover:bg-amber-900">
-          + הוספה מהירה
-        </button>
+        <div className="flex gap-2">
+          <button onClick={openQuickAdd} className="px-4 py-2 rounded-xl border border-amber-800 text-amber-800 dark:text-amber-400 dark:border-amber-700 text-sm font-medium">
+            הוספה מהירה
+          </button>
+          <button onClick={() => openCreate()} className="px-4 py-2 rounded-xl bg-amber-800 text-white text-sm font-medium hover:bg-amber-900">
+            + פריט חדש
+          </button>
+        </div>
       </div>
 
       <div className="flex flex-wrap gap-2">
@@ -56,7 +62,7 @@ export default function TasksPage() {
         ))}
         <label className="flex items-center gap-1.5 text-xs text-stone-500 dark:text-stone-400 mr-2">
           <input type="checkbox" checked={showDone} onChange={(e) => setShowDone(e.target.checked)} className="accent-amber-800" />
-          הצג גם הושלמו
+          הצג גם הושלמו ובוטלו
         </label>
       </div>
 

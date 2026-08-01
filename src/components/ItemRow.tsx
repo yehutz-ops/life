@@ -16,9 +16,10 @@ export default function ItemRow({
   hoverActions?: boolean
 }) {
   const { toggleDone, postponeToTomorrow } = useStore()
-  const { open } = useDetailModal()
+  const { openEdit } = useDetailModal()
   const done = item.status === 'done'
-  const overdue = isOverdue(item.date) && !done
+  const active = item.status !== 'done' && item.status !== 'cancelled'
+  const overdue = isOverdue(item.date) && active
 
   return (
     <li className={`group flex items-center gap-3 py-2.5 ${hoverActions ? 'rounded-xl hover:bg-stone-50 dark:hover:bg-stone-800/50 -mx-2 px-2' : ''}`}>
@@ -38,11 +39,11 @@ export default function ItemRow({
       </div>
 
       <span className={`text-xs whitespace-nowrap ${overdue ? 'text-amber-800 dark:text-amber-400 font-medium' : 'text-stone-400 dark:text-stone-500'}`}>
-        {item.time ? `${daysUntilLabel(item.date)} · ${item.time}` : daysUntilLabel(item.date)}
+        {item.startTime ? `${daysUntilLabel(item.date)} · ${item.startTime}` : daysUntilLabel(item.date)}
       </span>
 
       <div className={`flex items-center gap-1 shrink-0 ${hoverActions ? 'opacity-0 group-hover:opacity-100 transition-opacity' : ''}`}>
-        {(item.kind === 'task' || item.kind === 'reminder' || item.kind === 'waiting') && (
+        {item.kind !== 'event' && (
           <button
             title={done ? 'סמן כלא הושלם' : 'סמן כהושלם'}
             onClick={() => toggleDone(item.id)}
@@ -51,12 +52,12 @@ export default function ItemRow({
             ✓
           </button>
         )}
-        {!done && (item.kind === 'task' || item.kind === 'reminder') && (
+        {active && (item.kind === 'task' || item.kind === 'reminder') && (
           <button title="דחה למחר" onClick={() => postponeToTomorrow(item.id)} className="w-7 h-7 rounded-lg hover:bg-stone-100 dark:hover:bg-stone-800 text-sm">
             ⏭️
           </button>
         )}
-        <button title="פתח פרטים" onClick={() => open(item.id)} className="w-7 h-7 rounded-lg hover:bg-stone-100 dark:hover:bg-stone-800 text-sm">
+        <button title="פתח פרטים" onClick={() => openEdit(item.id)} className="w-7 h-7 rounded-lg hover:bg-stone-100 dark:hover:bg-stone-800 text-sm">
           🔍
         </button>
       </div>
