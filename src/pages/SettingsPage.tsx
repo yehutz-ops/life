@@ -1,4 +1,4 @@
-import { useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useTheme } from '../data/ThemeContext'
 import { Card } from '../components/ui'
 import { Theme } from '../data/types'
@@ -6,6 +6,9 @@ import { useStore } from '../data/StoreContext'
 import { useConfirm } from '../data/ConfirmContext'
 import { useNotify } from '../data/NotificationContext'
 import { exportBackup, parseBackupFile, importBackup } from '../data/db/backup'
+import { getAiEnabled, setAiEnabled } from '../ai/aiSettings'
+import { checkAiHealth } from '../ai/aiClient'
+import { getUsageStats, resetUsageStats, estimateCostUsd, AiUsageStats } from '../ai/usageTracking'
 
 const options: { value: Theme; label: string; icon: string }[] = [
   { value: 'light', label: 'בהיר', icon: '☀️' },
@@ -13,12 +16,44 @@ const options: { value: Theme; label: string; icon: string }[] = [
   { value: 'system', label: 'לפי הגדרת המחשב', icon: '🖥️' },
 ]
 
+type AiStatus = 'unknown' | 'checking' | 'connected' | 'not_configured' | 'failed'
+
 export default function SettingsPage() {
   const { theme, setTheme } = useTheme()
   const { clearSampleData, reloadFromDisk } = useStore()
   const confirm = useConfirm()
   const notify = useNotify()
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const [aiEnabled, setAiEnabledLocal] = useState(getAiEnabled())
+  const [aiStatus, setAiStatus] = useState<AiStatus>('unknown')
+  const [usage, setUsage] = useState<AiUsageStats>({ calls: 0, inputTokens: 0, outputTokens: 0 })
+
+  useEffect(() => {
+    getUsageStats().then(setUsage)
+    handleCheckConnection()
+  }, [])
+
+  async function handleCheckConnection() {
+    setAiStatus('checking')
+    try {
+      const ok = await checkAiHealth()
+      setAiStatus(ok ? 'connected' : 'not_configured')
+    } catch {
+      setAiStatus('failed')
+    }
+  }
+
+  function toggleAi(enabled: boolean) {
+    setAiEnabled(enabled)
+    setAiEnabledLocal(enabled)
+  }
+
+  async function handleResetUsage() {
+    await resetUsageStats()
+    setUsage({ calls: 0, inputTokens: 0, outputTokens: 0 })
+    notify('המונה אופס', 'success')
+  }
 
   async function handleClear() {
     const ok = await confirm({
@@ -65,6 +100,14 @@ export default function SettingsPage() {
     }
   }
 
+  const statusLabel: Record<AiStatus, string> = {
+    unknown: '—',
+    checking: 'בודק...',
+    connected: '🟢 מחובר',
+    not_configured: '⚪ חיבור Claude AI עדיין לא הוגדר',
+    failed: '🔴 הבדיקה נכשלה',
+  }
+
   return (
     <div className="space-y-6 pb-24">
       <div>
@@ -86,6 +129,56 @@ export default function SettingsPage() {
               <span>{o.label}</span>
             </button>
           ))}
+        </div>
+      </Card>
+
+      <Card>
+        <div className="flex items-center justify-between mb-1">
+          <h2 className="text-base font-bold text-stone-900 dark:text-stone-100">✨ Claude AI</h2>
+          <label className="flex items-center gap-2 text-sm text-stone-600 dark:text-stone-300">
+            <input type="checkbox" checked={aiEnabled} onChange={(e) => toggleAi(e.target.checked)} className="accent-violet-700" />
+            הפעלה
+          </label>
+        </div>
+        <p className="text-sm text-stone-500 dark:text-stone-400 mb-4">
+          המפתח נשמר באופן פרטי בסביבת השרת המקומית ואינו מוצג באפליקציה.
+        </p>
+
+        <div className="grid sm:grid-cols-3 gap-3 text-sm mb-4">
+          <div>
+            <div className="text-xs text-stone-400 dark:text-stone-500">סטטוס חיבור</div>
+            <div className="text-stone-800 dark:text-stone-100">{statusLabel[aiStatus]}</div>
+          </div>
+          <div>
+            <div className="text-xs text-stone-400 dark:text-stone-500">מודל פעיל</div>
+            <div className="text-stone-800 dark:text-stone-100">claude-haiku-4-5</div>
+          </div>
+          <div>
+            <button onClick={handleCheckConnection} className="px-3 py-1.5 rounded-xl border border-stone-200 dark:border-stone-700 text-xs font-medium text-stone-600 dark:text-stone-300">
+              בדיקת חיבור
+            </button>
+          </div>
+        </div>
+
+        <div className="border-t border-stone-100 dark:border-stone-800 pt-4">
+          <div className="text-xs text-stone-400 dark:text-stone-500 mb-2">שימוש החודש (מונה מקומי)</div>
+          <div className="grid sm:grid-cols-3 gap-3 text-sm mb-3">
+            <div>
+              <div className="text-xs text-stone-400 dark:text-stone-500">קריאות</div>
+              <div className="text-stone-800 dark:text-stone-100">{usage.calls}</div>
+            </div>
+            <div>
+              <div className="text-xs text-stone-400 dark:text-stone-500">טוקנים (משוער)</div>
+              <div className="text-stone-800 dark:text-stone-100">{(usage.inputTokens + usage.outputTokens).toLocaleString()}</div>
+            </div>
+            <div>
+              <div className="text-xs text-stone-400 dark:text-stone-500">עלות משוערת</div>
+              <div className="text-stone-800 dark:text-stone-100">${estimateCostUsd(usage).toFixed(3)}</div>
+            </div>
+          </div>
+          <button onClick={handleResetUsage} className="px-3 py-1.5 rounded-xl border border-stone-200 dark:border-stone-700 text-xs text-stone-500 dark:text-stone-400">
+            איפוס מונה מקומי
+          </button>
         </div>
       </Card>
 

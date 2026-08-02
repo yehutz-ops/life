@@ -1,14 +1,27 @@
 import { createContext, useContext, useState, ReactNode } from 'react'
+import { DomainId, ItemKind, Priority } from './types'
+
+export interface ItemPrefill {
+  title?: string
+  kind?: ItemKind
+  domain?: DomainId
+  date?: string
+  startTime?: string
+  priority?: Priority
+  projectId?: string
+  personName?: string
+  notes?: string
+}
 
 export type ItemModalTarget =
   | { mode: 'edit'; id: string }
-  | { mode: 'create'; domain?: string }
+  | { mode: 'create'; domain?: string; prefill?: ItemPrefill }
   | { mode: 'sort'; entryId: string; prefillTitle: string }
 
 interface DetailModalValue {
   target: ItemModalTarget | null
   openEdit: (id: string) => void
-  openCreate: (domain?: string) => void
+  openCreate: (domain?: string, prefill?: ItemPrefill) => void
   openSort: (entryId: string, prefillTitle: string) => void
   close: () => void
 }
@@ -22,7 +35,7 @@ export function DetailModalProvider({ children }: { children: ReactNode }) {
       value={{
         target,
         openEdit: (id) => setTarget({ mode: 'edit', id }),
-        openCreate: (domain) => setTarget({ mode: 'create', domain }),
+        openCreate: (domain, prefill) => setTarget({ mode: 'create', domain, prefill }),
         openSort: (entryId, prefillTitle) => setTarget({ mode: 'sort', entryId, prefillTitle }),
         close: () => setTarget(null),
       }}

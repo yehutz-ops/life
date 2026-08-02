@@ -68,7 +68,19 @@ export default function ItemDetailModal() {
         notes: editingItem.notes ?? '',
       })
     } else if (target.mode === 'create') {
-      setForm({ ...emptyForm(), domain: (target.domain as DomainId) ?? 'work' })
+      const p = target.prefill
+      setForm({
+        ...emptyForm(),
+        title: p?.title ?? '',
+        domain: p?.domain ?? (target.domain as DomainId) ?? 'work',
+        kind: p?.kind ?? 'task',
+        date: p?.date ?? todayISO(),
+        startTime: p?.startTime ?? '',
+        priority: p?.priority ?? 'medium',
+        projectId: p?.projectId ?? '',
+        personName: p?.personName ?? '',
+        notes: p?.notes ?? '',
+      })
     } else if (target.mode === 'sort') {
       setForm({ ...emptyForm(), title: target.prefillTitle })
     }
