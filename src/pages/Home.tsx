@@ -136,7 +136,7 @@ export default function Home() {
                     {brand?.name ?? 'מותג'} {c.time ? `· ${c.time}` : ''} · {c.awaitingApproval ? 'ממתין לאישור' : c.status}
                   </div>
                 </div>
-                <Link to={`/work/brands/${c.brandId}`} className="text-xs font-medium text-amber-800 dark:text-amber-400 underline shrink-0">
+                <Link to={`/work/brands/${c.brandId}?tab=content&item=${c.id}`} className="text-xs font-medium text-amber-800 dark:text-amber-400 underline shrink-0">
                   לתוכן
                 </Link>
               </li>

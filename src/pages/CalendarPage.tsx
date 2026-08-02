@@ -159,7 +159,10 @@ export default function CalendarPage() {
                     {c.time ? ` · ${c.time}` : ''}
                   </span>
                 </div>
-                <Link to={`/work/brands/${c.brandId}`} className="text-xs font-medium px-2 py-1 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300">
+                <Link
+                  to={`/work/brands/${c.brandId}?tab=content&item=${c.id}`}
+                  className="text-xs font-medium px-2 py-1 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300"
+                >
                   {brand?.name ?? 'מותג'}
                 </Link>
               </li>

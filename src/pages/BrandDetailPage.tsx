@@ -1,9 +1,10 @@
-import { useState } from 'react'
-import { useParams, Link, Navigate } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { useParams, useSearchParams, Link, Navigate } from 'react-router-dom'
 import { useStore } from '../data/StoreContext'
 import { Card, EmptyLine } from '../components/ui'
 
 type GroupKey = 'overview' | 'products' | 'content' | 'campaigns' | 'media' | 'tasks'
+const GROUP_KEYS: GroupKey[] = ['overview', 'products', 'content', 'campaigns', 'media', 'tasks']
 
 const GROUPS: { key: GroupKey; label: string }[] = [
   { key: 'overview', label: 'סקירה' },
@@ -93,10 +94,20 @@ function FieldList({ fields, skip = [] }: { fields: Record<string, unknown>; ski
 
 export default function BrandDetailPage() {
   const { brandId } = useParams<{ brandId: string }>()
+  const [searchParams] = useSearchParams()
   const { brands, brandProducts, brandCampaigns, brandContentItems, brandPendingActivities, brandMediaAssets, items } = useStore()
-  const [group, setGroup] = useState<GroupKey>('overview')
+  const tabParam = searchParams.get('tab') as GroupKey | null
+  const highlightContentId = searchParams.get('item')
+  const [group, setGroup] = useState<GroupKey>(tabParam && GROUP_KEYS.includes(tabParam) ? tabParam : 'overview')
 
   const brand = brands.find((b) => b.id === brandId)
+
+  useEffect(() => {
+    if (!highlightContentId || group !== 'content') return
+    const el = document.getElementById(`content-${highlightContentId}`)
+    el?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }, [highlightContentId, group])
+
   if (!brand) return <Navigate to="/work/brands" replace />
 
   const products = brandProducts.filter((p) => p.brandId === brand.id)
@@ -198,7 +209,7 @@ export default function BrandDetailPage() {
             <ul className="divide-y divide-stone-50 dark:divide-stone-800 px-5">
               {contentItems.length === 0 && <EmptyLine text="אין עדיין פריטי תוכן" />}
               {contentItems.map((c) => (
-                <li key={c.id} className="py-3">
+                <li key={c.id} id={`content-${c.id}`} className={`py-3 ${highlightContentId === c.id ? 'bg-amber-50 dark:bg-amber-950/40 -mx-5 px-5 rounded-lg' : ''}`}>
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-sm font-medium text-stone-800 dark:text-stone-100">{c.title}</span>
                     <span className="text-xs text-stone-400 dark:text-stone-500 whitespace-nowrap">
