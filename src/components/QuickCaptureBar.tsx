@@ -165,7 +165,7 @@ export default function QuickCaptureBar() {
 
   return (
     <div className="relative">
-      <div className="relative">
+      <div className="rounded-3xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-900 shadow-sm shadow-stone-200/50 dark:shadow-none overflow-hidden transition-shadow focus-within:shadow-md">
         <input
           value={text}
           onChange={(e) => {
@@ -184,33 +184,52 @@ export default function QuickCaptureBar() {
             }
           }}
           placeholder="כתוב או אמור משהו שצריך לזכור..."
-          className="w-full rounded-full border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-900 py-4 pr-6 pl-36 text-base shadow-sm shadow-stone-200/50 dark:shadow-none focus:outline-none focus:ring-2 focus:ring-amber-200 dark:focus:ring-amber-900"
+          className="w-full bg-transparent px-5 pt-4 pb-2.5 text-base text-stone-800 dark:text-stone-100 placeholder:text-stone-400 dark:placeholder:text-stone-500 focus:outline-none"
         />
-        <div className="absolute left-2 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
-          <button
-            onClick={toggle}
-            title="הקלטה קולית — רק הופכת דיבור לטקסט, לא שומרת"
-            className={`w-10 h-10 rounded-full flex items-center justify-center text-lg transition-colors ${
-              isListening ? 'bg-amber-800 text-white animate-pulse' : 'bg-stone-100 dark:bg-stone-800 text-stone-500 dark:text-stone-300 hover:bg-stone-200 dark:hover:bg-stone-700'
-            }`}
-          >
-            🎤
-          </button>
-          {aiEnabled && (
+        <div className="flex items-center justify-between px-3 py-2 bg-stone-50/70 dark:bg-stone-800/50 border-t border-stone-100 dark:border-stone-800">
+          <div className="flex items-center gap-1.5">
             <button
-              onClick={triggerAi}
-              title="חיפוש חכם עם Claude AI"
-              className={`w-10 h-10 rounded-full flex items-center justify-center text-lg transition-colors ${
-                aiActive ? 'bg-violet-700 text-white' : 'bg-stone-100 dark:bg-stone-800 text-stone-500 dark:text-stone-300 hover:bg-stone-200 dark:hover:bg-stone-700'
+              onClick={toggle}
+              title="הקלטה קולית — רק הופכת דיבור לטקסט, לא שומרת"
+              aria-label="הקלטה קולית — רק הופכת דיבור לטקסט, לא שומרת"
+              className={`w-9 h-9 rounded-full flex items-center justify-center text-base transition-colors ${
+                isListening ? 'bg-amber-800 text-white animate-pulse' : 'bg-white dark:bg-stone-900 text-stone-500 dark:text-stone-300 hover:bg-stone-100 dark:hover:bg-stone-700'
               }`}
             >
-              ✨
+              🎤
             </button>
-          )}
+            {aiEnabled && (
+              <div className="flex items-center rounded-full bg-white dark:bg-stone-900 p-0.5" role="group" aria-label="מצב חיפוש">
+                <button
+                  onClick={() => setAiActive(false)}
+                  title="חיפוש רגיל בתוך המערכת"
+                  aria-label="חיפוש רגיל בתוך המערכת"
+                  aria-pressed={!aiActive}
+                  className={`w-8 h-8 rounded-full flex items-center justify-center text-sm transition-colors ${
+                    !aiActive ? 'bg-stone-100 dark:bg-stone-700 text-stone-700 dark:text-stone-100' : 'text-stone-400 dark:text-stone-500 hover:text-stone-600 dark:hover:text-stone-300'
+                  }`}
+                >
+                  🔍
+                </button>
+                <button
+                  onClick={triggerAi}
+                  title="חיפוש חכם עם Claude AI"
+                  aria-label="חיפוש חכם עם Claude AI"
+                  aria-pressed={aiActive}
+                  className={`w-8 h-8 rounded-full flex items-center justify-center text-sm transition-colors ${
+                    aiActive ? 'bg-violet-700 text-white' : 'text-stone-400 dark:text-stone-500 hover:text-stone-600 dark:hover:text-stone-300'
+                  }`}
+                >
+                  ✨
+                </button>
+              </div>
+            )}
+          </div>
           <button
             onClick={handleAdd}
             title="הוספה לתיבת הכניסה"
-            className="w-10 h-10 rounded-full bg-amber-800 hover:bg-amber-900 text-white flex items-center justify-center text-xl"
+            aria-label="הוספה לתיבת הכניסה"
+            className="w-9 h-9 rounded-full bg-amber-800 hover:bg-amber-900 text-white flex items-center justify-center text-lg transition-colors"
           >
             +
           </button>

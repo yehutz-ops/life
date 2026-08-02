@@ -5,6 +5,7 @@ export interface DomainConfig {
   name: string
   icon: string
   path: string
+  imageSrc: string // נתיב תמונת רקע לכרטיס בדף הבית; אם הקובץ לא קיים עדיין, הכרטיס נופל לגרדיאנט+אייקון
   description: string
   comingSoon: string
   classes: {
@@ -23,6 +24,7 @@ export const domainList: DomainConfig[] = [
     name: 'עבודה',
     icon: '💼',
     path: '/work',
+    imageSrc: '/domain-images/work.jpg',
     description: 'שיתופי פעולה, מותגים ותוכן',
     comingSoon: 'יוצרי תוכן ושיתופי פעולה, מותגים והשקות, מרכז תוכן, ספקים ומשלוחים, עובדים',
     classes: {
@@ -39,6 +41,7 @@ export const domainList: DomainConfig[] = [
     name: 'לימודים',
     icon: '🎓',
     path: '/studies',
+    imageSrc: '/domain-images/studies.jpg',
     description: 'קורסים, מטלות ומבחנים',
     comingSoon: 'קורסים, מטלות, מבחנים, תוכנית לימוד ומעקב נקודות זכות',
     classes: {
@@ -55,6 +58,7 @@ export const domainList: DomainConfig[] = [
     name: 'אישי',
     icon: '👤',
     path: '/personal',
+    imageSrc: '/domain-images/personal.jpg',
     description: 'סידורים, משפחה ומסמכים',
     comingSoon: 'סידורים, תשלומים ומסמכים אישיים, משפחה, תהליכים בירוקרטיים',
     classes: {
@@ -71,6 +75,7 @@ export const domainList: DomainConfig[] = [
     name: 'בית',
     icon: '🏠',
     path: '/household',
+    imageSrc: '/domain-images/home.jpg',
     description: 'קניות, תחזוקה ותשלומים',
     comingSoon: 'רשימת קניות, תחזוקה ותיקונים, ציוד לבית, אקווריום, תשלומים הקשורים לבית',
     classes: {
@@ -87,6 +92,7 @@ export const domainList: DomainConfig[] = [
     name: 'בריאות וספורט',
     icon: '🥊',
     path: '/health',
+    imageSrc: '/domain-images/health.jpg',
     description: 'אימונים ומטרות בריאות',
     comingSoon: 'יומן אימונים, מטרות אישיות ומעקב התקדמות',
     classes: {
@@ -103,6 +109,7 @@ export const domainList: DomainConfig[] = [
     name: 'כספים',
     icon: '💰',
     path: '/finance',
+    imageSrc: '/domain-images/finance.jpg',
     description: 'השקעות, תשלומים ויעדים',
     comingSoon: 'מעקב השקעות, התחייבויות ותשלומים, ויעדים כספיים',
     classes: {
@@ -119,6 +126,7 @@ export const domainList: DomainConfig[] = [
     name: 'פיתוח אישי ויוזמות',
     icon: '💡',
     path: '/personal-development',
+    imageSrc: '/domain-images/personalDevelopment.jpg',
     description: 'רעיונות ופרויקטים אישיים',
     comingSoon: 'מאגר רעיונות, פרויקטים צדדיים ומטרות לטווח ארוך',
     classes: {

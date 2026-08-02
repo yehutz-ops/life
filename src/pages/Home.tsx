@@ -6,7 +6,7 @@ import { Card, FilterChip } from '../components/ui'
 import ItemRow from '../components/ItemRow'
 import DomainCard from '../components/DomainCard'
 import QuickCaptureBar from '../components/QuickCaptureBar'
-import { formatFullHebrewDate, getGreeting, todayISO } from '../utils/date'
+import { getGreeting, todayISO } from '../utils/date'
 import { DomainId, ItemStatus } from '../data/types'
 
 const priorityWeight = { high: 0, medium: 1, low: 2 } as const
@@ -57,17 +57,19 @@ export default function Home() {
 
   return (
     <div className="space-y-10 pb-24">
-      <div className="text-center pt-4">
-        <p className="text-sm text-stone-500 dark:text-stone-400">
-          {getGreeting()}, יהודה · {formatFullHebrewDate()}
+      <div className="text-center pt-6 pb-2">
+        <div className="text-xs font-medium tracking-wide text-stone-400 dark:text-stone-500 uppercase animate-enter">Life Control Center</div>
+        <h1 className="font-elegant text-4xl sm:text-5xl text-stone-800 dark:text-stone-100 mt-3 animate-enter" style={{ animationDelay: '60ms' }}>
+          {getGreeting()}, יהודה
+        </h1>
+        <p className="text-stone-400 dark:text-stone-500 text-base sm:text-lg mt-2 animate-enter" style={{ animationDelay: '120ms' }}>
+          מה תרצה לסדר היום?
         </p>
-        <h1 className="font-elegant text-3xl text-stone-800 dark:text-stone-100 mt-2">Life Control Center</h1>
-        <p className="text-stone-400 dark:text-stone-500 text-sm mt-1">מרכז השליטה שלך</p>
       </div>
 
-      <div className="max-w-2xl mx-auto w-full">
+      <div className="max-w-2xl mx-auto w-full animate-enter" style={{ animationDelay: '180ms' }}>
         <QuickCaptureBar />
-        {pendingInbox.length > 0 && (
+        {pendingInbox.length > 0 ? (
           <div className="flex items-center justify-center gap-2 mt-4 text-sm">
             <span className="text-stone-500 dark:text-stone-400">
               📥 {pendingInbox.length} פריטים ממתינים לסידור בתיבת הכניסה
@@ -76,14 +78,21 @@ export default function Home() {
               לסדר עכשיו
             </Link>
           </div>
+        ) : (
+          <p className="text-center text-xs text-stone-300 dark:text-stone-600 mt-4">תיבת הכניסה ריקה ✓</p>
         )}
       </div>
 
-      <div>
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {domainList.map((d) => {
+      <div className="animate-enter" style={{ animationDelay: '240ms' }}>
+        <h2 className="text-lg font-bold text-stone-800 dark:text-stone-100 mb-4 text-center">תחומי החיים שלי</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {domainList.map((d, i) => {
             const stats = domainStats(d.id)
-            return <DomainCard key={d.id} domain={d} openCount={stats.openCount} next={stats.next} />
+            // 7 כרטיסים: בטבלת שני טורים המספר האי-זוגי משאיר כרטיס בודד יתום — נותנים לו רוחב כפול שם בלבד.
+            const isLastOdd = i === domainList.length - 1 && domainList.length % 2 === 1
+            return (
+              <DomainCard key={d.id} domain={d} openCount={stats.openCount} next={stats.next} className={isLastOdd ? 'sm:col-span-2 lg:col-span-1' : ''} />
+            )
           })}
         </div>
       </div>
