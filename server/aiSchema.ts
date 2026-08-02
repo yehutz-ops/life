@@ -16,7 +16,12 @@ export const AI_RESPONSE_SCHEMA = {
       properties: {
         title: { type: 'string' },
         type: { type: 'string', enum: ['task', 'event', 'reminder', 'waiting'] },
-        domain: { type: ['string', 'null'], enum: ['work', 'studies', 'personal', 'home', 'health', 'finance', 'development', null] },
+        domain: {
+          anyOf: [
+            { type: 'string', enum: ['work', 'studies', 'personal', 'home', 'health', 'finance', 'development'] },
+            { type: 'null' },
+          ],
+        },
         date: { type: ['string', 'null'] },
         startTime: { type: ['string', 'null'] },
         priority: { type: 'string', enum: ['low', 'normal', 'high'] },

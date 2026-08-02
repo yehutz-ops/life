@@ -176,6 +176,13 @@ export default function SettingsPage() {
           </div>
         </div>
 
+        {aiStatus === 'failed' && aiErrorDetail && (
+          <div className="mb-4 px-3 py-2 rounded-xl bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900 text-xs text-red-700 dark:text-red-300">
+            <span className="font-bold">{aiErrorDetail.type}</span>
+            {aiErrorDetail.message && <span> — {aiErrorDetail.message}</span>}
+          </div>
+        )}
+
         <div className="border-t border-stone-100 dark:border-stone-800 pt-4">
           <div className="text-xs text-stone-400 dark:text-stone-500 mb-2">שימוש החודש (מונה מקומי)</div>
           <div className="grid sm:grid-cols-3 gap-3 text-sm mb-3">
