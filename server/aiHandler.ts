@@ -5,6 +5,45 @@ import { buildSystemPrompt } from './systemPrompt'
 const MODEL = 'claude-haiku-4-5'
 const TIMEZONE = 'Asia/Jerusalem'
 
+export type AiErrorType = 'auth' | 'rate_limit' | 'network' | 'server' | 'unknown'
+
+export interface ClassifiedError {
+  type: AiErrorType
+  message: string
+}
+
+// מסווג שגיאה לקטגוריה בטוחה להצגה למשתמש — אף פעם לא כולל את המפתח או פרטים טכניים גולמיים.
+export function classifyError(err: unknown): ClassifiedError {
+  if (err instanceof Anthropic.AuthenticationError) {
+    return { type: 'auth', message: 'המפתח שהוזן לא תקין, או שאין לו הרשאה. כדאי לבדוק את המפתח ב-.env.local.' }
+  }
+  if (err instanceof Anthropic.RateLimitError) {
+    return { type: 'rate_limit', message: 'יותר מדי בקשות כרגע. אפשר לנסות שוב בעוד רגע.' }
+  }
+  if (err instanceof Anthropic.APIConnectionError) {
+    return { type: 'network', message: 'אין חיבור לשרתי Claude כרגע. בדוק את החיבור לאינטרנט ונסה שוב.' }
+  }
+  if (err instanceof Anthropic.APIError) {
+    return { type: 'server', message: 'שירות Claude החזיר שגיאה זמנית. אפשר לנסות שוב עוד רגע.' }
+  }
+  return { type: 'unknown', message: 'קרתה תקלה לא צפויה. אפשר לנסות שוב.' }
+}
+
+export async function testConnection(apiKey: string): Promise<{ ok: true } | { ok: false; error: ClassifiedError }> {
+  try {
+    const client = new Anthropic({ apiKey })
+    await client.messages.create({
+      model: MODEL,
+      max_tokens: 1,
+      messages: [{ role: 'user', content: 'ping' }],
+    })
+    return { ok: true }
+  } catch (err) {
+    console.error('[ai/test-connection] failed:', (err as any)?.message ?? err)
+    return { ok: false, error: classifyError(err) }
+  }
+}
+
 export interface AiCommandRequest {
   text: string
   relevantItems: Array<{ id: string; title: string; kind: string; domain: string; date?: string; status: string }>

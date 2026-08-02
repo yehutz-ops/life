@@ -7,7 +7,7 @@ import { useConfirm } from '../data/ConfirmContext'
 import { useNotify } from '../data/NotificationContext'
 import { exportBackup, parseBackupFile, importBackup } from '../data/db/backup'
 import { getAiEnabled, setAiEnabled } from '../ai/aiSettings'
-import { checkAiHealth } from '../ai/aiClient'
+import { checkAiHealth, testAiConnection } from '../ai/aiClient'
 import { getUsageStats, resetUsageStats, estimateCostUsd, AiUsageStats } from '../ai/usageTracking'
 
 const options: { value: Theme; label: string; icon: string }[] = [
@@ -18,6 +18,15 @@ const options: { value: Theme; label: string; icon: string }[] = [
 
 type AiStatus = 'unknown' | 'checking' | 'connected' | 'not_configured' | 'failed'
 
+const ERROR_TYPE_LABELS: Record<string, string> = {
+  auth: 'מפתח לא תקין',
+  rate_limit: 'יותר מדי בקשות',
+  network: 'אין חיבור',
+  server: 'שגיאת שרת של Claude',
+  no_key: 'לא הוגדר מפתח',
+  unknown: 'שגיאה לא ידועה',
+}
+
 export default function SettingsPage() {
   const { theme, setTheme } = useTheme()
   const { clearSampleData, reloadFromDisk } = useStore()
@@ -27,20 +36,27 @@ export default function SettingsPage() {
 
   const [aiEnabled, setAiEnabledLocal] = useState(getAiEnabled())
   const [aiStatus, setAiStatus] = useState<AiStatus>('unknown')
+  const [aiErrorDetail, setAiErrorDetail] = useState<{ type: string; message: string } | null>(null)
   const [usage, setUsage] = useState<AiUsageStats>({ calls: 0, inputTokens: 0, outputTokens: 0 })
 
   useEffect(() => {
     getUsageStats().then(setUsage)
-    handleCheckConnection()
+    // בדיקה קלה בלבד בטעינת העמוד — לא מבצעת קריאה אמיתית ל-Claude ואין לה עלות.
+    // אם יש מפתח, הסטטוס נשאר "unknown" (טרם נבדק בפועל) עד לחיצה על "בדיקת חיבור".
+    checkAiHealth().then((hasKey) => setAiStatus(hasKey ? 'unknown' : 'not_configured'))
   }, [])
 
   async function handleCheckConnection() {
     setAiStatus('checking')
-    try {
-      const ok = await checkAiHealth()
-      setAiStatus(ok ? 'connected' : 'not_configured')
-    } catch {
-      setAiStatus('failed')
+    setAiErrorDetail(null)
+    const result = await testAiConnection()
+    if (result.ok) {
+      setAiStatus('connected')
+    } else {
+      setAiStatus(result.errorType === 'no_key' ? 'not_configured' : 'failed')
+      if (result.errorType && result.errorType !== 'no_key') {
+        setAiErrorDetail({ type: ERROR_TYPE_LABELS[result.errorType] ?? result.errorType, message: result.message ?? '' })
+      }
     }
   }
 
@@ -101,9 +117,9 @@ export default function SettingsPage() {
   }
 
   const statusLabel: Record<AiStatus, string> = {
-    unknown: '—',
+    unknown: '🟡 מפתח מוגדר — טרם נבדק (לחץ "בדיקת חיבור")',
     checking: 'בודק...',
-    connected: '🟢 מחובר',
+    connected: '🟢 מחובר בהצלחה',
     not_configured: '⚪ חיבור Claude AI עדיין לא הוגדר',
     failed: '🔴 הבדיקה נכשלה',
   }

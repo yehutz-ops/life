@@ -5,6 +5,7 @@ import { recordUsage } from './usageTracking'
 
 export class AiClientError extends Error {}
 
+// בדיקה קלה: האם בכלל הוגדר מפתח בשרת. לא מבצעת קריאה אמיתית ל-Claude, אין עלות.
 export async function checkAiHealth(): Promise<boolean> {
   try {
     const res = await fetch('/api/ai/health')
@@ -13,6 +14,24 @@ export async function checkAiHealth(): Promise<boolean> {
     return !!data.configured
   } catch {
     return false
+  }
+}
+
+export interface ConnectionTestResult {
+  ok: boolean
+  errorType?: string
+  message?: string
+}
+
+// בדיקת חיבור אמיתית — קריאה מינימלית ל-Claude API. מופעלת רק בלחיצה מפורשת על "בדיקת חיבור".
+export async function testAiConnection(): Promise<ConnectionTestResult> {
+  try {
+    const res = await fetch('/api/ai/test-connection', { method: 'POST' })
+    const data = await res.json()
+    if (data.ok) return { ok: true }
+    return { ok: false, errorType: data.error?.type, message: data.error?.message }
+  } catch {
+    return { ok: false, errorType: 'network', message: 'אין חיבור לאינטרנט כרגע.' }
   }
 }
 
