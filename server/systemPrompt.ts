@@ -1,3 +1,5 @@
+import { computeUpcomingDates, UpcomingDates } from './relativeDates'
+
 const DOMAIN_LABELS: Record<string, string> = {
   work: 'עבודה',
   studies: 'לימודים',
@@ -18,24 +20,32 @@ export function domainLabel(domain: string) {
   return DOMAIN_LABELS[domain] ?? domain
 }
 
-export function buildSystemPrompt(now: Date, timezone: string, routingRules: RoutingRuleContext[] = []) {
+export function buildSystemPrompt(now: Date, timezone: string, routingRules: RoutingRuleContext[] = []): { prompt: string; dates: UpcomingDates } {
   const dateStr = new Intl.DateTimeFormat('he-IL', { timeZone: timezone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(now)
   const [day, month, year] = dateStr.split('.')
   const isoDate = `${year}-${month}-${day}`
   const weekday = new Intl.DateTimeFormat('he-IL', { timeZone: timezone, weekday: 'long' }).format(now)
   const timeStr = new Intl.DateTimeFormat('he-IL', { timeZone: timezone, hour: '2-digit', minute: '2-digit', hour12: false }).format(now)
 
+  const dates = computeUpcomingDates(isoDate)
+  const datesTableText = dates.table.map((t) => `- ${t.label}: ${t.iso}`).join('\n')
+
   const rulesText = routingRules.length
     ? routingRules.map((r) => `- "${r.keyword}" → ${domainLabel(r.domain)}${r.destination ? ` / ${r.destination}` : ''}`).join('\n')
     : '(אין עדיין העדפות נלמדות)'
 
-  return `אתה מנוע סיווג וניתוב חכם בתוך אפליקציה אישית בשם Life Control Center. אתה מקבל משפט אחד בעברית (טקסט חופשי, אולי מוקלד ואולי מוכתב), ופרטים על פריטים/פרויקטים קיימים והעדפות ניתוב שנלמדו, ומחזיר תשובה מובנית בלבד. אתה לעולם לא מבצע פעולה בפועל — רק מסווג ומחזיר מבנה נתונים.
+  const promptText = `אתה מנוע סיווג וניתוב חכם בתוך אפליקציה אישית בשם Life Control Center. אתה מקבל משפט אחד בעברית (טקסט חופשי, אולי מוקלד ואולי מוכתב), ופרטים על פריטים/פרויקטים/מותגים/מוצרים קיימים והעדפות ניתוב שנלמדו, ומחזיר תשובה מובנית בלבד. אתה לעולם לא מבצע פעולה בפועל — רק מסווג ומחזיר מבנה נתונים.
 
 תאריך והקשר זמן נוכחיים (אמת יחידה — אל תנחש תאריך אחר):
 - תאריך היום: ${isoDate}
 - יום בשבוע: ${weekday}
 - שעה מקומית: ${timeStr}
 - אזור זמן: ${timezone}
+
+=== תאריכים יחסיים מחושבים מראש — חובה להשתמש בהם, אסור לחשב תאריך יחסי בעצמך ===
+לוח השנה מלא טעויות קלות עבור חישוב ידני. כל תאריך יחסי שמוזכר במשפט המשתמש (מחר, מחרתיים, שם של יום בשבוע, "בעוד שבוע") — קח את הערך המדויק מהטבלה הבאה, אל תחשב לבד:
+${datesTableText}
+אם מוזכר יום בשבוע בלי המילה "הקרוב"/"הבא" (למשל "ביום שלישי"), עדיין תשתמש בערך "הקרוב" מהטבלה — זה תמיד מתייחס להופעה הבאה של אותו יום, לעולם לא היום הנוכחי עצמו גם אם היום במקרה אותו יום בשבוע. לתאריכים יחסיים שלא מופיעים בטבלה (למשל "בעוד יומיים", "בעוד חודש"), חשב בזהירות מתאריך היום שלמעלה.
 
 עליך לבחור intent אחד מתוך שלושה: "create_draft", "search", "clarification".
 
@@ -63,7 +73,9 @@ export function buildSystemPrompt(now: Date, timezone: string, routingRules: Rou
 - "לשים בגדים במכבסה" → itemType: task, domain: home, destination: "כביסה" (או "סידורים"), listType: errands, needsCalendar: false.
 - "לשלוח מייל לבית מדרש" → itemType: task, domain: studies, destination: "בית מדרש". לעולם לא שולחים מייל בפועל — רק יוצרים משימה. needsApproval: true.
 - "לבדוק נקודות זכות" → itemType: task, domain: studies, destination: "נקודות זכות".
-- "להכין פוסט/Reel ל-FOMOWA" → itemType: content_item (או task אם הניסוח לא מתאר תוכן ממש), domain: work, destination: "מותגים" או "תוכן", brandId/projectId אם FOMOWA מופיע ברשימת הפרויקטים/מותגים שסופקה, needsCalendar: true אם יש תאריך פרסום מוגדר.
+- "להכין פוסט/Reel ל-FOMOWA" → itemType: content_item (או task אם הניסוח לא מתאר תוכן ממש), domain: work, destination: "מותגים" או "תוכן", brandId = המזהה האמיתי של FOMOWA מרשימת המותגים שסופקה (חובה למלא אם המותג מופיע ברשימה — לא רק projectId), needsCalendar: true אם יש תאריך פרסום מוגדר.
+- "לצלם/לערוך/לאשר תוכן של <שם מוצר>" (למשל "Pannaco Tahaa") → אם שם המוצר מופיע ברשימת המוצרים שסופקה, מלא גם productId (המזהה של המוצר) וגם brandId (מתוך brand_id של אותו מוצר ברשימה) — לא רק את אחד מהם.
+- "לבדוק את הקמפיין של <מותג>" → אם יש קמפיין מתאים ברשימת הקמפיינים שסופקה, מלא campaignId וגם brandId; אחרת רק brandId.
 
 === רמת ביטחון (confidence) ===
 confidence הוא מספר בין 0 ל-1, המשקף כמה אתה בטוח בשיוך ה-domain/destination (לא בכותרת או בתאריך).
@@ -91,9 +103,12 @@ ${rulesText}
 
 === כללים נוספים ===
 - כותרת (title) בטיוטה: ניסוח טבעי בלשון פועל, כפי שהיה נאמר בעברית יומיומית — כולל תחילית כמו "ל" (לדוגמה "לקנות מטאטא", לא "קנות מטאטא" ולא "מטאטא"). אם מילה בסוף המשפט (כמו "לבית", "בעבודה") משמשת רק לציון תחום החיים ולא חלק מהותי מהפעולה, אל תכלול אותה בכותרת — היא צריכה להשפיע רק על שדה domain. לדוגמה: "מחר לקנות מטאטא לבית" → title: "לקנות מטאטא", domain: "home".
-- אל תמציא projectId/brandId — מלא אותם רק אם הם מופיעים ברשימת הפריטים/פרויקטים הרלוונטיים שסופקה לך, אחרת null.
-- productId/campaignId: מלא רק אם מוזכרים במפורש בהקשר שסופק, אחרת null.
+- אל תמציא projectId/brandId/productId/campaignId — מלא אותם רק אם הם מופיעים ברשימות הפריטים/פרויקטים/מותגים/מוצרים/קמפיינים הרלוונטיות שסופקו לך (בהודעת המשתמש, בשדות relevantBrands/relevantProducts/relevantCampaigns), אחרת null.
+- brandId ו-projectId הם שני שדות עצמאיים — projectId אינו תחליף ל-brandId. אם המשפט מזכיר מותג קיים מהרשימה, brandId חייב להתמלא (גם אם יש גם פרויקט קשור שממלא את projectId בנוסף). לעולם אל תשמור שם מותג רק בתוך notes במקום ב-brandId.
+- כשיש גם productId וגם brandId רלוונטיים (מוצר ששייך למותג), מלא את שניהם.
 - answer הוא תמיד משפט קצר וברור בעברית שמוצג למשתמש, ומתאר בקצרה לאן שויך הפריט (למשל "נוסף לבית → רשימת קניות").
 - אל תמציא מידע שלא נמצא ברשימה שסופקה לך.
 - אתה לא מבצע שום פעולה בפועל (לא שומר, לא מוחק, לא מסמן כהושלם, לא שולח, לא מפרסם) — אתה רק מחזיר טיוטה או תוצאות חיפוש להצגה. השמירה בפועל, כולל שמירה אוטומטית ברמת ביטחון גבוהה, מתבצעת רק על ידי האפליקציה עצמה בהתאם לרמת הביטחון שהחזרת — ותמיד ניתנת לביטול על ידי המשתמש.`
+
+  return { prompt: promptText, dates }
 }

@@ -16,7 +16,7 @@ const MEDIUM_CONFIDENCE = 0.65
 type AutoSaved = { itemId: string; tier: 'high' | 'medium'; domainLabel: string; domainIcon: string; destination?: string; needsApproval: boolean }
 
 export default function QuickCaptureBar() {
-  const { items, projects, addInboxEntry, addItem, deleteItem } = useStore()
+  const { items, projects, brands, brandProducts, brandCampaigns, addInboxEntry, addItem, deleteItem } = useStore()
   const { openEdit, openCreate } = useDetailModal()
   const { openEdit: openProjectEdit } = useProjectForm()
   const [text, setText] = useState('')
@@ -50,7 +50,7 @@ export default function QuickCaptureBar() {
     setAiResult(null)
     setAutoSaved(null)
     try {
-      const result = await askAi(text.trim(), items, projects)
+      const result = await askAi(text.trim(), items, projects, brands, brandProducts, brandCampaigns)
 
       if (result.intent === 'create_draft' && result.draft) {
         const mapped = mapAiDraft(result.draft)

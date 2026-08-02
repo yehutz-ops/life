@@ -1,6 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { AI_RESPONSE_SCHEMA } from './aiSchema'
 import { buildSystemPrompt, RoutingRuleContext } from './systemPrompt'
+import { findMentionedRelativeDate } from './relativeDates'
 
 const MODEL = 'claude-haiku-4-5'
 const TIMEZONE = 'Asia/Jerusalem'
@@ -48,20 +49,26 @@ export interface AiCommandRequest {
   text: string
   relevantItems: Array<{ id: string; title: string; kind: string; domain: string; date?: string; status: string }>
   relevantProjects: Array<{ id: string; name: string; domain: string }>
+  relevantBrands?: Array<{ id: string; name: string; domain: string }>
+  relevantProducts?: Array<{ id: string; name: string; brandId: string }>
+  relevantCampaigns?: Array<{ id: string; name: string; brandId: string }>
   routingRules?: RoutingRuleContext[]
 }
 
 export async function handleAiCommand(apiKey: string, body: AiCommandRequest) {
   const client = new Anthropic({ apiKey })
   const now = new Date()
-  const system = buildSystemPrompt(now, TIMEZONE, body.routingRules ?? [])
+  const { prompt: system, dates } = buildSystemPrompt(now, TIMEZONE, body.routingRules ?? [])
 
   const context = {
     items: body.relevantItems.slice(0, 20),
     projects: body.relevantProjects.slice(0, 10),
+    brands: (body.relevantBrands ?? []).slice(0, 10),
+    products: (body.relevantProducts ?? []).slice(0, 15),
+    campaigns: (body.relevantCampaigns ?? []).slice(0, 10),
   }
 
-  const userMessage = `בקשת המשתמש: "${body.text}"\n\nפריטים ופרויקטים רלוונטיים שנמצאו במערכת (JSON, רק אלה מותרים כ-matchedItemIds/matchedProjectIds/projectId):\n${JSON.stringify(context)}`
+  const userMessage = `בקשת המשתמש: "${body.text}"\n\nפריטים, פרויקטים, מותגים, מוצרים וקמפיינים רלוונטיים שנמצאו במערכת (JSON, רק אלה מותרים כ-matchedItemIds/matchedProjectIds/projectId/brandId/productId/campaignId):\n${JSON.stringify(context)}`
 
   const response = await client.messages.create({
     model: MODEL,
@@ -82,10 +89,32 @@ export async function handleAiCommand(apiKey: string, body: AiCommandRequest) {
 
   const validItemIds = new Set(context.items.map((it) => it.id))
   const validProjectIds = new Set(context.projects.map((p) => p.id))
+  const validBrandIds = new Set(context.brands.map((b) => b.id))
+  const validProductIds = new Set(context.products.map((p) => p.id))
+  const validCampaignIds = new Set(context.campaigns.map((c) => c.id))
   parsed.matchedItemIds = (parsed.matchedItemIds ?? []).filter((id: string) => validItemIds.has(id))
   parsed.matchedProjectIds = (parsed.matchedProjectIds ?? []).filter((id: string) => validProjectIds.has(id))
   if (parsed.draft?.projectId && !validProjectIds.has(parsed.draft.projectId)) {
     parsed.draft.projectId = null
+  }
+  if (parsed.draft?.brandId && !validBrandIds.has(parsed.draft.brandId)) {
+    parsed.draft.brandId = null
+  }
+  if (parsed.draft?.productId && !validProductIds.has(parsed.draft.productId)) {
+    parsed.draft.productId = null
+  }
+  if (parsed.draft?.campaignId && !validCampaignIds.has(parsed.draft.campaignId)) {
+    parsed.draft.campaignId = null
+  }
+
+  // קו הגנה שני על תאריכים יחסיים — עצמאי מהחישוב הפנימי של המודל. אם המשפט המקורי מזכיר
+  // תאריך יחסי מפורש (מחר / יום בשבוע / "בעוד שבוע"), התאריך המוחזר חייב להתאים לחישוב הדטרמיניסטי.
+  if (parsed.draft?.date) {
+    const mentioned = findMentionedRelativeDate(body.text, dates)
+    if (mentioned && mentioned.iso !== parsed.draft.date) {
+      console.warn(`[ai] תיקון תאריך יחסי: "${mentioned.label}" — המודל החזיר ${parsed.draft.date}, מתקן ל-${mentioned.iso}`)
+      parsed.draft.date = mentioned.iso
+    }
   }
 
   return {

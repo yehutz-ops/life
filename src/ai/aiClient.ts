@@ -1,5 +1,6 @@
 import { Item, Project } from '../data/types'
-import { findRelevant } from './localSearch'
+import { Brand, BrandProduct, BrandCampaign } from '../data/brandTypes'
+import { findRelevant, findRelevantBrandContext } from './localSearch'
 import { AiResponse } from './types'
 import { recordUsage } from './usageTracking'
 import { getRoutingRules } from './routingPreferences'
@@ -36,8 +37,21 @@ export async function testAiConnection(): Promise<ConnectionTestResult> {
   }
 }
 
-export async function askAi(text: string, items: Item[], projects: Project[]): Promise<AiResponse> {
+export async function askAi(
+  text: string,
+  items: Item[],
+  projects: Project[],
+  brands: Brand[] = [],
+  brandProducts: BrandProduct[] = [],
+  brandCampaigns: BrandCampaign[] = [],
+): Promise<AiResponse> {
   const { items: relevantItems, projects: relevantProjects } = findRelevant(text, items, projects)
+  const { brands: relevantBrands, products: relevantProducts, campaigns: relevantCampaigns } = findRelevantBrandContext(
+    text,
+    brands,
+    brandProducts,
+    brandCampaigns,
+  )
   const rules = await getRoutingRules()
   const routingRules = rules.map((r) => ({ keyword: r.keyword, domain: r.domain, destination: r.destination }))
 
@@ -46,7 +60,7 @@ export async function askAi(text: string, items: Item[], projects: Project[]): P
     res = await fetch('/api/ai/command', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text, relevantItems, relevantProjects, routingRules }),
+      body: JSON.stringify({ text, relevantItems, relevantProjects, relevantBrands, relevantProducts, relevantCampaigns, routingRules }),
     })
   } catch {
     throw new AiClientError('אין חיבור לאינטרנט כרגע. אפשר להמשיך להשתמש בחיפוש הרגיל, ולנסות שוב מאוחר יותר.')
