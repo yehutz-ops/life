@@ -2,6 +2,7 @@ import { Item, Project } from '../data/types'
 import { findRelevant } from './localSearch'
 import { AiResponse } from './types'
 import { recordUsage } from './usageTracking'
+import { getRoutingRules } from './routingPreferences'
 
 export class AiClientError extends Error {}
 
@@ -37,13 +38,15 @@ export async function testAiConnection(): Promise<ConnectionTestResult> {
 
 export async function askAi(text: string, items: Item[], projects: Project[]): Promise<AiResponse> {
   const { items: relevantItems, projects: relevantProjects } = findRelevant(text, items, projects)
+  const rules = await getRoutingRules()
+  const routingRules = rules.map((r) => ({ keyword: r.keyword, domain: r.domain, destination: r.destination }))
 
   let res: Response
   try {
     res = await fetch('/api/ai/command', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text, relevantItems, relevantProjects }),
+      body: JSON.stringify({ text, relevantItems, relevantProjects, routingRules }),
     })
   } catch {
     throw new AiClientError('אין חיבור לאינטרנט כרגע. אפשר להמשיך להשתמש בחיפוש הרגיל, ולנסות שוב מאוחר יותר.')

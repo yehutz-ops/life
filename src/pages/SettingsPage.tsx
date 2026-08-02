@@ -6,9 +6,11 @@ import { useStore } from '../data/StoreContext'
 import { useConfirm } from '../data/ConfirmContext'
 import { useNotify } from '../data/NotificationContext'
 import { exportBackup, parseBackupFile, importBackup } from '../data/db/backup'
-import { getAiEnabled, setAiEnabled } from '../ai/aiSettings'
+import { getAiEnabled, setAiEnabled, getAiLearningEnabled, setAiLearningEnabled } from '../ai/aiSettings'
 import { checkAiHealth, testAiConnection } from '../ai/aiClient'
 import { getUsageStats, resetUsageStats, estimateCostUsd, AiUsageStats } from '../ai/usageTracking'
+import { getRoutingRules, deleteRoutingRule, RoutingRule } from '../ai/routingPreferences'
+import { getDomain } from '../data/domains'
 
 const options: { value: Theme; label: string; icon: string }[] = [
   { value: 'light', label: 'בהיר', icon: '☀️' },
@@ -38,13 +40,30 @@ export default function SettingsPage() {
   const [aiStatus, setAiStatus] = useState<AiStatus>('unknown')
   const [aiErrorDetail, setAiErrorDetail] = useState<{ type: string; message: string } | null>(null)
   const [usage, setUsage] = useState<AiUsageStats>({ calls: 0, inputTokens: 0, outputTokens: 0 })
+  const [learningEnabled, setLearningEnabledLocal] = useState(getAiLearningEnabled())
+  const [routingRules, setRoutingRules] = useState<RoutingRule[]>([])
 
   useEffect(() => {
     getUsageStats().then(setUsage)
     // בדיקה קלה בלבד בטעינת העמוד — לא מבצעת קריאה אמיתית ל-Claude ואין לה עלות.
     // אם יש מפתח, הסטטוס נשאר "unknown" (טרם נבדק בפועל) עד לחיצה על "בדיקת חיבור".
     checkAiHealth().then((hasKey) => setAiStatus(hasKey ? 'unknown' : 'not_configured'))
+    loadRoutingRules()
   }, [])
+
+  function loadRoutingRules() {
+    getRoutingRules().then(setRoutingRules)
+  }
+
+  function toggleLearning(enabled: boolean) {
+    setAiLearningEnabled(enabled)
+    setLearningEnabledLocal(enabled)
+  }
+
+  async function handleDeleteRule(id: string) {
+    await deleteRoutingRule(id)
+    loadRoutingRules()
+  }
 
   async function handleCheckConnection() {
     setAiStatus('checking')
@@ -203,6 +222,38 @@ export default function SettingsPage() {
             איפוס מונה מקומי
           </button>
         </div>
+      </Card>
+
+      <Card>
+        <div className="flex items-center justify-between mb-1">
+          <h2 className="text-base font-bold text-stone-900 dark:text-stone-100">העדפות שהמערכת למדה</h2>
+          <label className="flex items-center gap-2 text-sm text-stone-600 dark:text-stone-300">
+            <input type="checkbox" checked={learningEnabled} onChange={(e) => toggleLearning(e.target.checked)} className="accent-violet-700" />
+            למידה מתיקונים
+          </label>
+        </div>
+        <p className="text-sm text-stone-500 dark:text-stone-400 mb-4">
+          כשמשנים ידנית את תחום החיים של פריט, המערכת זוכרת את התיקון כרמז לפעם הבאה. אפשר לצפות בכללים, למחוק כל אחד מהם, או לכבות את הלמידה לגמרי.
+        </p>
+        {routingRules.length === 0 ? (
+          <p className="text-sm text-stone-400 dark:text-stone-500">אין עדיין כללים.</p>
+        ) : (
+          <ul className="divide-y divide-stone-50 dark:divide-stone-800">
+            {routingRules.map((r) => (
+              <li key={r.id} className="flex items-center justify-between gap-2 py-2.5">
+                <div className="text-sm min-w-0">
+                  <span className="font-medium text-stone-800 dark:text-stone-100">"{r.keyword}"</span>
+                  <span className="text-stone-500 dark:text-stone-400"> ← {getDomain(r.domain).icon} {getDomain(r.domain).name}</span>
+                  {r.destination && <span className="text-stone-400 dark:text-stone-500"> / {r.destination}</span>}
+                  <span className="text-xs text-stone-400 dark:text-stone-500"> · משקל {r.weight}{r.source === 'seed' ? ' · ברירת מחדל' : ' · נלמד'}</span>
+                </div>
+                <button onClick={() => handleDeleteRule(r.id)} className="shrink-0 px-2.5 py-1 rounded-lg border border-stone-200 dark:border-stone-700 text-xs text-stone-500 dark:text-stone-400">
+                  מחק
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
       </Card>
 
       <Card>

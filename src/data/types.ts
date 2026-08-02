@@ -8,13 +8,17 @@ export type ProjectStatus = 'in_progress' | 'done'
 export type Theme = 'light' | 'dark' | 'system'
 export type InboxSource = 'typed' | 'spoken'
 export type InboxStatus = 'pending' | 'sorted' | 'deleted'
+export type ListType = 'shopping' | 'errands' | 'meetings' | 'studies_admin' | 'content' | 'brands' | 'general'
 
 export interface Item {
   id: string
   title: string
   kind: ItemKind
   domain: DomainId
+  destination?: string
+  listType?: ListType
   projectId?: string
+  brandId?: string
   date?: string
   startTime?: string
   endTime?: string

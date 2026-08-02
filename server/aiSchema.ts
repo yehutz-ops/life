@@ -1,5 +1,8 @@
 // סכימת ה-JSON שה-AI חייב להחזיר. שדות עם ערך אפשרי null נשארים תמיד בתשובה,
 // לפי הנחיה מפורשת: "כל השדות יכולים להיות קיימים עם ערך null, במקום מבנה מורכב מדי".
+//
+// שדות עם enum שיכולים גם להיות null (domain, listType) חייבים anyOf ולא type:['string','null']+enum —
+// שילוב type-array עם enum נדחה על ידי הוולידטור של Claude (ראו server/aiHandler.ts / תיקון מהשלב הקודם).
 export const AI_RESPONSE_SCHEMA = {
   type: 'object',
   additionalProperties: false,
@@ -12,26 +15,43 @@ export const AI_RESPONSE_SCHEMA = {
     draft: {
       type: ['object', 'null'],
       additionalProperties: false,
-      required: ['title', 'type', 'domain', 'date', 'startTime', 'priority', 'projectId', 'brandId', 'relatedPerson', 'notes'],
+      required: [
+        'title', 'itemType', 'domain', 'destination', 'listType',
+        'date', 'startTime', 'endTime', 'priority', 'person',
+        'projectId', 'brandId', 'productId', 'campaignId',
+        'needsCalendar', 'needsApproval', 'notes',
+      ],
       properties: {
         title: { type: 'string' },
-        type: { type: 'string', enum: ['task', 'event', 'reminder', 'waiting'] },
+        itemType: { type: 'string', enum: ['task', 'event', 'reminder', 'waiting', 'shopping_item', 'content_item'] },
         domain: {
           anyOf: [
             { type: 'string', enum: ['work', 'studies', 'personal', 'home', 'health', 'finance', 'development'] },
             { type: 'null' },
           ],
         },
+        destination: { type: ['string', 'null'] },
+        listType: {
+          anyOf: [
+            { type: 'string', enum: ['shopping', 'errands', 'meetings', 'studies_admin', 'content', 'brands', 'general'] },
+            { type: 'null' },
+          ],
+        },
         date: { type: ['string', 'null'] },
         startTime: { type: ['string', 'null'] },
+        endTime: { type: ['string', 'null'] },
         priority: { type: 'string', enum: ['low', 'normal', 'high'] },
+        person: { type: ['string', 'null'] },
         projectId: { type: ['string', 'null'] },
         brandId: { type: ['string', 'null'] },
-        relatedPerson: { type: ['string', 'null'] },
+        productId: { type: ['string', 'null'] },
+        campaignId: { type: ['string', 'null'] },
+        needsCalendar: { type: 'boolean' },
+        needsApproval: { type: 'boolean' },
         notes: { type: ['string', 'null'] },
       },
     },
-    confidence: { type: 'string', enum: ['low', 'medium', 'high'] },
+    confidence: { type: 'number' },
     clarificationQuestion: { type: ['string', 'null'] },
   },
 } as const

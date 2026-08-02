@@ -1,6 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { AI_RESPONSE_SCHEMA } from './aiSchema'
-import { buildSystemPrompt } from './systemPrompt'
+import { buildSystemPrompt, RoutingRuleContext } from './systemPrompt'
 
 const MODEL = 'claude-haiku-4-5'
 const TIMEZONE = 'Asia/Jerusalem'
@@ -48,12 +48,13 @@ export interface AiCommandRequest {
   text: string
   relevantItems: Array<{ id: string; title: string; kind: string; domain: string; date?: string; status: string }>
   relevantProjects: Array<{ id: string; name: string; domain: string }>
+  routingRules?: RoutingRuleContext[]
 }
 
 export async function handleAiCommand(apiKey: string, body: AiCommandRequest) {
   const client = new Anthropic({ apiKey })
   const now = new Date()
-  const system = buildSystemPrompt(now, TIMEZONE)
+  const system = buildSystemPrompt(now, TIMEZONE, body.routingRules ?? [])
 
   const context = {
     items: body.relevantItems.slice(0, 20),

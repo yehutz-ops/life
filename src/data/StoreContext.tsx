@@ -6,6 +6,8 @@ import { isIndexedDBAvailable } from './db/database'
 import { newId } from '../utils/id'
 import { tomorrowISO, nowISO } from '../utils/date'
 import { useNotify } from './NotificationContext'
+import { recordDomainCorrection } from '../ai/routingPreferences'
+import { getAiLearningEnabled } from '../ai/aiSettings'
 
 interface StoreValue {
   items: Item[]
@@ -79,6 +81,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     try {
       await repository.putItem(next)
       setItems((prev) => prev.map((it) => (it.id === id ? next : it)))
+      // תיקון ידני של תחום/יעד — נשמר כהעדפת ניתוב מקומית ללמידה עתידית (לא חוק מוחלט, ראו routingPreferences.ts).
+      if (patch.domain && patch.domain !== current.domain && getAiLearningEnabled()) {
+        recordDomainCorrection(next.title, next.domain, next.destination).catch(() => {})
+      }
     } catch (err: any) {
       notify(`לא הצלחתי לשמור את השינוי: ${err.message ?? err}`, 'error')
     }
