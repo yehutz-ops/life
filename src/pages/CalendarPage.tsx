@@ -1,9 +1,11 @@
 import { useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useStore } from '../data/StoreContext'
 import { getDomain } from '../data/domains'
 import { Card, kindIcon } from '../components/ui'
 import { todayISO } from '../utils/date'
 import { Item } from '../data/types'
+import { BrandContentItem } from '../data/brandTypes'
 
 const weekdays = ['א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ש']
 const monthNames = ['ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני', 'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר']
@@ -13,7 +15,7 @@ function toISO(d: Date) {
 }
 
 export default function CalendarPage() {
-  const { items } = useStore()
+  const { items, brandContentItems, brands } = useStore()
   const [cursor, setCursor] = useState(() => {
     const d = new Date()
     return new Date(d.getFullYear(), d.getMonth(), 1)
@@ -31,6 +33,18 @@ export default function CalendarPage() {
     return map
   }, [items])
 
+  // פריטי תוכן עם תאריך מוצגים ביומן ישירות מרשומת ה-ContentItem — בלי ליצור אירוע כפול ב-Items.
+  const contentByDate = useMemo(() => {
+    const map: Record<string, BrandContentItem[]> = {}
+    brandContentItems
+      .filter((c) => c.date)
+      .forEach((c) => {
+        map[c.date!] = map[c.date!] || []
+        map[c.date!].push(c)
+      })
+    return map
+  }, [brandContentItems])
+
   const cells = useMemo(() => {
     const startOffset = cursor.getDay()
     const gridStart = new Date(cursor)
@@ -47,6 +61,7 @@ export default function CalendarPage() {
   }
 
   const selectedItems = itemsByDate[selectedDate] || []
+  const selectedContentItems = contentByDate[selectedDate] || []
 
   return (
     <div className="space-y-6 pb-24">
@@ -79,6 +94,7 @@ export default function CalendarPage() {
             const iso = toISO(d)
             const inMonth = d.getMonth() === cursor.getMonth()
             const dayItems = itemsByDate[iso] || []
+            const dayContent = contentByDate[iso] || []
             const isSelected = iso === selectedDate
             const isToday = iso === todayISO()
             return (
@@ -100,6 +116,9 @@ export default function CalendarPage() {
                   {dayItems.slice(0, 4).map((it, i) => (
                     <span key={i} className={`w-1.5 h-1.5 rounded-full ${getDomain(it.domain!).classes.dot}`} />
                   ))}
+                  {dayContent.slice(0, 2).map((c, i) => (
+                    <span key={`c${i}`} className="w-1.5 h-1.5 rounded-full bg-amber-400" title="פריט תוכן" />
+                  ))}
                 </div>
               </button>
             )
@@ -108,7 +127,9 @@ export default function CalendarPage() {
       </Card>
 
       <Card>
-        <h2 className="text-base font-bold text-stone-900 dark:text-stone-100 mb-3">{selectedItems.length ? `מה קורה ב-${selectedDate}` : 'אין כלום ביום הנבחר'}</h2>
+        <h2 className="text-base font-bold text-stone-900 dark:text-stone-100 mb-3">
+          {selectedItems.length || selectedContentItems.length ? `מה קורה ב-${selectedDate}` : 'אין כלום ביום הנבחר'}
+        </h2>
         <ul className="divide-y divide-stone-50 dark:divide-stone-800">
           {selectedItems.map((it) => {
             const d = getDomain(it.domain!)
@@ -123,6 +144,24 @@ export default function CalendarPage() {
                   </span>
                 </div>
                 <span className={`text-xs font-medium px-2 py-1 rounded-full ${d.classes.chip}`}>{d.name}</span>
+              </li>
+            )
+          })}
+          {selectedContentItems.map((c) => {
+            const brand = brands.find((b) => b.id === c.brandId)
+            return (
+              <li key={c.id} className="flex items-center justify-between py-2.5">
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-amber-400" />
+                  <span className="text-sm text-stone-800 dark:text-stone-100">{c.title}</span>
+                  <span className="text-xs text-stone-400 dark:text-stone-500">
+                    · 📣 תוכן
+                    {c.time ? ` · ${c.time}` : ''}
+                  </span>
+                </div>
+                <Link to={`/work/brands/${c.brandId}`} className="text-xs font-medium px-2 py-1 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300">
+                  {brand?.name ?? 'מותג'}
+                </Link>
               </li>
             )
           })}

@@ -8,6 +8,9 @@ import DomainPage from './pages/DomainPage'
 import InboxPage from './pages/InboxPage'
 import SearchPage from './pages/SearchPage'
 import SettingsPage from './pages/SettingsPage'
+import BrandsPage from './pages/BrandsPage'
+import BrandImportPage from './pages/BrandImportPage'
+import BrandDetailPage from './pages/BrandDetailPage'
 import { StoreProvider } from './data/StoreContext'
 import { QuickAddProvider } from './data/QuickAddContext'
 import { DetailModalProvider } from './data/DetailModalContext'
@@ -36,6 +39,9 @@ export default function App() {
                         <Route path="search" element={<SearchPage />} />
                         <Route path="settings" element={<SettingsPage />} />
                         <Route path="work" element={<DomainPage domainId="work" />} />
+                        <Route path="work/brands" element={<BrandsPage />} />
+                        <Route path="work/brands/import" element={<BrandImportPage />} />
+                        <Route path="work/brands/:brandId" element={<BrandDetailPage />} />
                         <Route path="studies" element={<DomainPage domainId="studies" />} />
                         <Route path="personal" element={<DomainPage domainId="personal" />} />
                         <Route path="household" element={<DomainPage domainId="home" />} />

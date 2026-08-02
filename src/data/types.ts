@@ -19,6 +19,7 @@ export interface Item {
   listType?: ListType
   projectId?: string
   brandId?: string
+  contentItemId?: string
   date?: string
   startTime?: string
   endTime?: string

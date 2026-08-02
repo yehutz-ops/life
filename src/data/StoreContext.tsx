@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useState, ReactNode } from 'react'
 import { Item, Project, InboxEntry } from './types'
+import { Brand, BrandProduct, BrandCampaign, BrandContentItem, BrandPendingActivity, BrandMediaAsset } from './brandTypes'
 import { repository } from './db/repository'
 import { seedIfEmpty } from './db/seed'
 import { isIndexedDBAvailable } from './db/database'
@@ -13,6 +14,12 @@ interface StoreValue {
   items: Item[]
   projects: Project[]
   inboxEntries: InboxEntry[]
+  brands: Brand[]
+  brandProducts: BrandProduct[]
+  brandCampaigns: BrandCampaign[]
+  brandContentItems: BrandContentItem[]
+  brandPendingActivities: BrandPendingActivity[]
+  brandMediaAssets: BrandMediaAsset[]
   loading: boolean
   storageAvailable: boolean
   addItem: (data: Omit<Item, 'id' | 'createdAt' | 'updatedAt'>) => Promise<Item>
@@ -36,15 +43,37 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<Item[]>([])
   const [projects, setProjects] = useState<Project[]>([])
   const [inboxEntries, setInboxEntries] = useState<InboxEntry[]>([])
+  const [brands, setBrands] = useState<Brand[]>([])
+  const [brandProducts, setBrandProducts] = useState<BrandProduct[]>([])
+  const [brandCampaigns, setBrandCampaigns] = useState<BrandCampaign[]>([])
+  const [brandContentItems, setBrandContentItems] = useState<BrandContentItem[]>([])
+  const [brandPendingActivities, setBrandPendingActivities] = useState<BrandPendingActivity[]>([])
+  const [brandMediaAssets, setBrandMediaAssets] = useState<BrandMediaAsset[]>([])
   const [loading, setLoading] = useState(true)
   const storageAvailable = isIndexedDBAvailable()
   const notify = useNotify()
 
   async function loadAll() {
-    const [i, p, ib] = await Promise.all([repository.getAllItems(), repository.getAllProjects(), repository.getAllInboxEntries()])
+    const [i, p, ib, br, bp, bc, bci, bpa, bma] = await Promise.all([
+      repository.getAllItems(),
+      repository.getAllProjects(),
+      repository.getAllInboxEntries(),
+      repository.getAllBrands(),
+      repository.getAllBrandProducts(),
+      repository.getAllBrandCampaigns(),
+      repository.getAllBrandContentItems(),
+      repository.getAllBrandPendingActivities(),
+      repository.getAllBrandMediaAssets(),
+    ])
     setItems(i)
     setProjects(p)
     setInboxEntries(ib)
+    setBrands(br)
+    setBrandProducts(bp)
+    setBrandCampaigns(bc)
+    setBrandContentItems(bci)
+    setBrandPendingActivities(bpa)
+    setBrandMediaAssets(bma)
   }
 
   useEffect(() => {
@@ -184,6 +213,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setItems([])
       setProjects([])
       setInboxEntries([])
+      setBrands([])
+      setBrandProducts([])
+      setBrandCampaigns([])
+      setBrandContentItems([])
+      setBrandPendingActivities([])
+      setBrandMediaAssets([])
       notify('כל המידע נמחק. אפשר להתחיל מחדש.', 'success')
     } catch (err: any) {
       notify(`המחיקה נכשלה: ${err.message ?? err}`, 'error')
@@ -195,6 +230,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       items,
       projects,
       inboxEntries,
+      brands,
+      brandProducts,
+      brandCampaigns,
+      brandContentItems,
+      brandPendingActivities,
+      brandMediaAssets,
       loading,
       storageAvailable,
       addItem,
@@ -211,7 +252,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       clearSampleData,
       reloadFromDisk: loadAll,
     }),
-    [items, projects, inboxEntries, loading],
+    [items, projects, inboxEntries, brands, brandProducts, brandCampaigns, brandContentItems, brandPendingActivities, brandMediaAssets, loading],
   )
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>

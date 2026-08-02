@@ -13,7 +13,7 @@ const priorityWeight = { high: 0, medium: 1, low: 2 } as const
 const isActive = (status: ItemStatus) => status !== 'done' && status !== 'cancelled'
 
 export default function Home() {
-  const { items, inboxEntries } = useStore()
+  const { items, inboxEntries, brandContentItems, brands } = useStore()
   const [focusDomain, setFocusDomain] = useState<DomainId | null>(null)
 
   const pendingInbox = inboxEntries.filter((e) => e.status === 'pending')
@@ -46,6 +46,13 @@ export default function Home() {
         )
         .slice(0, 3),
     [items, focusDomain],
+  )
+
+  // פריטי תוכן (מותגים) שדורשים תשומת לב היום — לא הפכו למשימה כפולה ב-Items, רק מוצגים כאן מתוך רשומת התוכן עצמה.
+  const contentToday = useMemo(
+    () =>
+      brandContentItems.filter((c) => c.date === today && !c.published && (!focusDomain || focusDomain === 'work')),
+    [brandContentItems, focusDomain],
   )
 
   return (
@@ -109,7 +116,7 @@ export default function Home() {
             ליומן המלא
           </Link>
         </div>
-        {timedToday.length === 0 && untimedDue.length === 0 && (
+        {timedToday.length === 0 && untimedDue.length === 0 && contentToday.length === 0 && (
           <p className="text-sm text-stone-400 dark:text-stone-500 py-2">אין כלום שדורש תשומת לב היום 🎉</p>
         )}
         <ul className="divide-y divide-stone-50 dark:divide-stone-800">
@@ -119,6 +126,22 @@ export default function Home() {
           {untimedDue.map((it) => (
             <ItemRow key={it.id} item={it} hoverActions />
           ))}
+          {contentToday.map((c) => {
+            const brand = brands.find((b) => b.id === c.brandId)
+            return (
+              <li key={c.id} className="flex items-center justify-between gap-2 py-2.5">
+                <div className="min-w-0">
+                  <span className="text-sm font-medium text-stone-800 dark:text-stone-100">📣 {c.title}</span>
+                  <div className="text-xs text-stone-400 dark:text-stone-500 mt-0.5">
+                    {brand?.name ?? 'מותג'} {c.time ? `· ${c.time}` : ''} · {c.awaitingApproval ? 'ממתין לאישור' : c.status}
+                  </div>
+                </div>
+                <Link to={`/work/brands/${c.brandId}`} className="text-xs font-medium text-amber-800 dark:text-amber-400 underline shrink-0">
+                  לתוכן
+                </Link>
+              </li>
+            )
+          })}
         </ul>
       </Card>
     </div>

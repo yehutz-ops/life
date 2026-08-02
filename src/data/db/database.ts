@@ -1,11 +1,17 @@
 const DB_NAME = 'life-control-center'
-const DB_VERSION = 1
+const DB_VERSION = 2
 
 export const STORES = {
   items: 'items',
   projects: 'projects',
   inbox: 'inbox',
   meta: 'meta',
+  brands: 'brands',
+  brandProducts: 'brandProducts',
+  brandCampaigns: 'brandCampaigns',
+  brandContentItems: 'brandContentItems',
+  brandPendingActivities: 'brandPendingActivities',
+  brandMediaAssets: 'brandMediaAssets',
 } as const
 
 let dbPromise: Promise<IDBDatabase> | null = null
@@ -29,6 +35,13 @@ export function openDB(): Promise<IDBDatabase> {
       if (!db.objectStoreNames.contains(STORES.projects)) db.createObjectStore(STORES.projects, { keyPath: 'id' })
       if (!db.objectStoreNames.contains(STORES.inbox)) db.createObjectStore(STORES.inbox, { keyPath: 'id' })
       if (!db.objectStoreNames.contains(STORES.meta)) db.createObjectStore(STORES.meta, { keyPath: 'key' })
+      // מודל המותגים הכללי — משותף לכל מותג עתידי, לא רק FOMOWA.
+      if (!db.objectStoreNames.contains(STORES.brands)) db.createObjectStore(STORES.brands, { keyPath: 'id' })
+      if (!db.objectStoreNames.contains(STORES.brandProducts)) db.createObjectStore(STORES.brandProducts, { keyPath: 'id' })
+      if (!db.objectStoreNames.contains(STORES.brandCampaigns)) db.createObjectStore(STORES.brandCampaigns, { keyPath: 'id' })
+      if (!db.objectStoreNames.contains(STORES.brandContentItems)) db.createObjectStore(STORES.brandContentItems, { keyPath: 'id' })
+      if (!db.objectStoreNames.contains(STORES.brandPendingActivities)) db.createObjectStore(STORES.brandPendingActivities, { keyPath: 'id' })
+      if (!db.objectStoreNames.contains(STORES.brandMediaAssets)) db.createObjectStore(STORES.brandMediaAssets, { keyPath: 'id' })
     }
 
     req.onsuccess = () => resolve(req.result)
@@ -66,6 +79,45 @@ export function remove(storeName: string, id: string): Promise<void> {
 
 export function clearStore(storeName: string): Promise<void> {
   return withStore<void>(storeName, 'readwrite', (store) => store.clear())
+}
+
+// עסקה יחידה שפורשת על פני כמה מחסנים בבת אחת — כל הכתיבות מצליחות יחד, או שכולן מתבטלות יחד
+// (אטומיות אמיתית של IndexedDB, לא גיבוי-ושחזור ידני). משמש לייבוא חבילת מותג "הכול או כלום".
+export function runTransaction<T>(storeNames: string[], fn: (stores: Record<string, IDBObjectStore>) => T | Promise<T>): Promise<T> {
+  return openDB().then(
+    (db) =>
+      new Promise<T>((resolve, reject) => {
+        const tx = db.transaction(storeNames, 'readwrite')
+        const stores: Record<string, IDBObjectStore> = {}
+        for (const name of storeNames) stores[name] = tx.objectStore(name)
+
+        let result: T
+        tx.oncomplete = () => resolve(result)
+        tx.onerror = () => reject(tx.error ?? new Error('הפעולה נכשלה — לא בוצע שום שינוי'))
+        tx.onabort = () => reject(tx.error ?? new Error('הפעולה בוטלה — לא בוצע שום שינוי'))
+
+        const abortWith = (err: unknown) => {
+          try {
+            tx.abort()
+          } catch {
+            /* already aborted/finished */
+          }
+          reject(err)
+        }
+
+        // fn עלול לזרוק סינכרונית (למשל שגיאת structured-clone מ-store.put) — נתפס כאן
+        // כדי להבטיח שהעסקה תמיד תתבטל במלואה, לא רק כשהכישלון מגיע כ-Promise דחוי.
+        try {
+          Promise.resolve(fn(stores))
+            .then((r) => {
+              result = r
+            })
+            .catch(abortWith)
+        } catch (err) {
+          abortWith(err)
+        }
+      }),
+  )
 }
 
 export function getMeta(key: string): Promise<string | undefined> {

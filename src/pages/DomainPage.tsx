@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import { Link } from 'react-router-dom'
 import { useStore } from '../data/StoreContext'
 import { getDomain } from '../data/domains'
 import { Card, ProgressBar, EmptyLine } from '../components/ui'
@@ -6,7 +7,7 @@ import ItemRow from '../components/ItemRow'
 import { DomainId } from '../data/types'
 
 export default function DomainPage({ domainId }: { domainId: DomainId }) {
-  const { items, projects } = useStore()
+  const { items, projects, brands } = useStore()
   const domain = getDomain(domainId)
 
   const domainItems = useMemo(
@@ -38,6 +39,20 @@ export default function DomainPage({ domainId }: { domainId: DomainId }) {
           </div>
         </div>
       </div>
+
+      {domainId === 'work' && (
+        <Card>
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-base font-bold text-stone-900 dark:text-stone-100">מותגים</h2>
+              <p className="text-sm text-stone-500 dark:text-stone-400 mt-0.5">{brands.length} מותגים · שיתופי פעולה, תוכן וקמפיינים</p>
+            </div>
+            <Link to="/work/brands" className="px-4 py-2 rounded-xl border border-stone-200 dark:border-stone-700 text-sm font-medium text-stone-600 dark:text-stone-300">
+              לכל המותגים
+            </Link>
+          </div>
+        </Card>
+      )}
 
       {domainProjects.length > 0 && (
         <Card>
