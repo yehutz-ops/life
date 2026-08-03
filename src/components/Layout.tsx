@@ -14,9 +14,9 @@ export default function Layout() {
   const { loading } = useStore()
 
   return (
-    <div className="flex min-h-screen bg-stone-50 dark:bg-stone-950 warm-texture text-stone-900 dark:text-stone-100" dir="rtl">
+    <div className="flex min-h-screen bg-[#F7F5F1] dark:bg-[#1C1A18] text-stone-900 dark:text-stone-100" dir="rtl">
       <Sidebar collapsed={collapsed} onToggle={() => setCollapsed((c) => !c)} />
-      <main className="flex-1 p-6 lg:p-10 max-w-5xl mx-auto w-full">
+      <main className="flex-1 min-w-0 p-6 lg:p-10 max-w-5xl mx-auto w-full">
         <div className="flex justify-end mb-4">
           <ThemeToggle />
         </div>

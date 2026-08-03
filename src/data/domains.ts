@@ -16,6 +16,14 @@ export interface DomainConfig {
     bar: string
     ring: string
   }
+  // צבע Accent ייעודי לכרטיסי הריבוע בדף הבית החדש — נפרד לגמרי מ-classes (שממשיך לשמש
+  // ללא שינוי את התג/הכרטיסייה הישנה בכל שאר העמודים), כדי לא לשנות את המראה של עמודים אחרים.
+  homeAccent?: {
+    hex: string
+    text: string
+    bar: string
+    ring: string
+  }
 }
 
 export const domainList: DomainConfig[] = [
@@ -35,6 +43,12 @@ export const domainList: DomainConfig[] = [
       bar: 'bg-amber-600',
       ring: 'ring-amber-200',
     },
+    homeAccent: {
+      hex: '#3557D6',
+      text: 'text-[#3557D6]',
+      bar: 'bg-[#3557D6]',
+      ring: 'focus-visible:ring-[#3557D6]',
+    },
   },
   {
     id: 'studies',
@@ -51,6 +65,12 @@ export const domainList: DomainConfig[] = [
       dot: 'bg-orange-600',
       bar: 'bg-orange-600',
       ring: 'ring-orange-200',
+    },
+    homeAccent: {
+      hex: '#12897A',
+      text: 'text-[#12897A]',
+      bar: 'bg-[#12897A]',
+      ring: 'focus-visible:ring-[#12897A]',
     },
   },
   {
@@ -69,6 +89,12 @@ export const domainList: DomainConfig[] = [
       bar: 'bg-rose-500',
       ring: 'ring-rose-200',
     },
+    homeAccent: {
+      hex: '#D9622B',
+      text: 'text-[#D9622B]',
+      bar: 'bg-[#D9622B]',
+      ring: 'focus-visible:ring-[#D9622B]',
+    },
   },
   {
     id: 'home',
@@ -85,6 +111,12 @@ export const domainList: DomainConfig[] = [
       dot: 'bg-lime-600',
       bar: 'bg-lime-600',
       ring: 'ring-lime-200',
+    },
+    homeAccent: {
+      hex: '#5B7A3E',
+      text: 'text-[#5B7A3E]',
+      bar: 'bg-[#5B7A3E]',
+      ring: 'focus-visible:ring-[#5B7A3E]',
     },
   },
   {
@@ -119,6 +151,12 @@ export const domainList: DomainConfig[] = [
       dot: 'bg-stone-500',
       bar: 'bg-stone-500',
       ring: 'ring-stone-300',
+    },
+    homeAccent: {
+      hex: '#6B4FA0',
+      text: 'text-[#6B4FA0]',
+      bar: 'bg-[#6B4FA0]',
+      ring: 'focus-visible:ring-[#6B4FA0]',
     },
   },
   {
