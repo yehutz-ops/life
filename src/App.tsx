@@ -5,6 +5,8 @@ import TasksPage from './pages/TasksPage'
 import ProjectsPage from './pages/ProjectsPage'
 import CalendarPage from './pages/CalendarPage'
 import DomainPage from './pages/DomainPage'
+import WorkPage from './pages/WorkPage'
+import WorkCategoryPage from './pages/WorkCategoryPage'
 import InboxPage from './pages/InboxPage'
 import SearchPage from './pages/SearchPage'
 import SettingsPage from './pages/SettingsPage'
@@ -38,10 +40,11 @@ export default function App() {
                         <Route path="inbox" element={<InboxPage />} />
                         <Route path="search" element={<SearchPage />} />
                         <Route path="settings" element={<SettingsPage />} />
-                        <Route path="work" element={<DomainPage domainId="work" />} />
+                        <Route path="work" element={<WorkPage />} />
                         <Route path="work/brands" element={<BrandsPage />} />
                         <Route path="work/brands/import" element={<BrandImportPage />} />
                         <Route path="work/brands/:brandId" element={<BrandDetailPage />} />
+                        <Route path="work/:categoryId" element={<WorkCategoryPage />} />
                         <Route path="studies" element={<DomainPage domainId="studies" />} />
                         <Route path="personal" element={<DomainPage domainId="personal" />} />
                         <Route path="household" element={<DomainPage domainId="home" />} />
