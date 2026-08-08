@@ -7,6 +7,7 @@ import HubCategoryGrid from '../components/hub/HubCategoryGrid'
 import HubCategoryCard from '../components/hub/HubCategoryCard'
 import HubSummaryPanel from '../components/hub/HubSummaryPanel'
 import QuickCaptureBar from '../components/QuickCaptureBar'
+import SearchField from '../components/hub/SearchField'
 import { todayISO } from '../utils/date'
 import { ItemStatus } from '../data/types'
 
@@ -69,14 +70,7 @@ export default function WorkPage() {
     <DomainHubLayout
       name="עבודה"
       icon={BriefcaseIcon}
-      searchSlot={
-        <input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="חפש בתוך עבודה..."
-          className="w-full sm:w-64 rounded-xl border border-stone-200 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100 px-3.5 py-2 text-sm placeholder:text-stone-400"
-        />
-      }
+      searchSlot={<SearchField value={query} onChange={setQuery} placeholder="חפש בתוך עבודה..." />}
     >
       <QuickCaptureBar />
 

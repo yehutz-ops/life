@@ -1,7 +1,7 @@
 export type AiIntent = 'create_draft' | 'search' | 'clarification'
 
 export type AiItemType = 'task' | 'event' | 'reminder' | 'waiting' | 'shopping_item' | 'content_item'
-export type AiListType = 'shopping' | 'errands' | 'meetings' | 'studies_admin' | 'content' | 'brands' | 'general'
+export type AiListType = 'shopping' | 'errands' | 'meetings' | 'studies_admin' | 'content' | 'brands' | 'general' | 'maintenance' | 'bills'
 
 export interface AiDraft {
   title: string
@@ -21,6 +21,8 @@ export interface AiDraft {
   needsCalendar: boolean
   needsApproval: boolean
   notes: string | null
+  amount: number | null
+  currency: string | null
 }
 
 export interface AiResponse {

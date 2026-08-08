@@ -8,7 +8,7 @@ export type ProjectStatus = 'in_progress' | 'done'
 export type Theme = 'light' | 'dark' | 'system'
 export type InboxSource = 'typed' | 'spoken'
 export type InboxStatus = 'pending' | 'sorted' | 'deleted'
-export type ListType = 'shopping' | 'errands' | 'meetings' | 'studies_admin' | 'content' | 'brands' | 'general'
+export type ListType = 'shopping' | 'errands' | 'meetings' | 'studies_admin' | 'content' | 'brands' | 'general' | 'maintenance' | 'bills'
 
 export interface Item {
   id: string
@@ -28,6 +28,8 @@ export interface Item {
   waitingType?: WaitingType
   personName?: string
   notes?: string
+  amount?: number
+  currency?: string
   createdAt: string
   updatedAt: string
   completedAt?: string

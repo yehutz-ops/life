@@ -38,6 +38,8 @@ export interface MappedDraft {
   brandId?: string
   personName?: string
   notes?: string
+  amount?: number
+  currency?: string
 }
 
 export function mapAiDraft(draft: AiDraft): MappedDraft {
@@ -56,5 +58,7 @@ export function mapAiDraft(draft: AiDraft): MappedDraft {
     brandId: draft.brandId ?? undefined,
     personName: draft.person ?? undefined,
     notes: draft.notes ?? undefined,
+    amount: draft.amount ?? undefined,
+    currency: draft.currency ?? undefined,
   }
 }

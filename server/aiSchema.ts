@@ -19,7 +19,7 @@ export const AI_RESPONSE_SCHEMA = {
         'title', 'itemType', 'domain', 'destination', 'listType',
         'date', 'startTime', 'endTime', 'priority', 'person',
         'projectId', 'brandId', 'productId', 'campaignId',
-        'needsCalendar', 'needsApproval', 'notes',
+        'needsCalendar', 'needsApproval', 'notes', 'amount', 'currency',
       ],
       properties: {
         title: { type: 'string' },
@@ -33,7 +33,7 @@ export const AI_RESPONSE_SCHEMA = {
         destination: { type: ['string', 'null'] },
         listType: {
           anyOf: [
-            { type: 'string', enum: ['shopping', 'errands', 'meetings', 'studies_admin', 'content', 'brands', 'general'] },
+            { type: 'string', enum: ['shopping', 'errands', 'meetings', 'studies_admin', 'content', 'brands', 'general', 'maintenance', 'bills'] },
             { type: 'null' },
           ],
         },
@@ -49,6 +49,8 @@ export const AI_RESPONSE_SCHEMA = {
         needsCalendar: { type: 'boolean' },
         needsApproval: { type: 'boolean' },
         notes: { type: ['string', 'null'] },
+        amount: { type: ['number', 'null'] },
+        currency: { type: ['string', 'null'] },
       },
     },
     confidence: { type: 'number' },

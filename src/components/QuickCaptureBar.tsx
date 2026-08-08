@@ -71,6 +71,8 @@ export default function QuickCaptureBar() {
             brandId: mapped.brandId,
             personName: mapped.personName,
             notes: mapped.notes,
+            amount: mapped.amount,
+            currency: mapped.currency,
           })
           const d = getDomain(mapped.domain)
           setAutoSaved({
@@ -149,6 +151,8 @@ export default function QuickCaptureBar() {
         brandId: mapped.brandId,
         personName: mapped.personName,
         notes: mapped.notes,
+        amount: mapped.amount,
+        currency: mapped.currency,
       })
     } else {
       // אין תחום ברור — לא ממציאים שיוך, שומרים בתיבת כניסה כדי שדבר לא יאבד.

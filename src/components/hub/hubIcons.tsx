@@ -102,6 +102,42 @@ export function ChecklistIcon(props: IconProps) {
   )
 }
 
+export function HomeIcon(props: IconProps) {
+  return (
+    <Base {...props}>
+      <path d="M4 11 12 4l8 7" />
+      <path d="M6 9.5V19a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V9.5" />
+      <path d="M10 20v-5h4v5" />
+    </Base>
+  )
+}
+
+export function ShoppingBagIcon(props: IconProps) {
+  return (
+    <Base {...props}>
+      <path d="M5.5 8h13l1 12.5a1 1 0 0 1-1 1.1H5.5a1 1 0 0 1-1-1.1L5.5 8Z" />
+      <path d="M8.5 8V6a3.5 3.5 0 0 1 7 0v2" />
+    </Base>
+  )
+}
+
+export function WrenchIcon(props: IconProps) {
+  return (
+    <Base {...props}>
+      <path d="M14.5 6.5a4 4 0 0 0-5.4 4.9L3.5 17l3 3 5.6-5.6a4 4 0 0 0 4.9-5.4l-2.6 2.6-2.1-.6-.6-2.1 2.6-2.4Z" />
+    </Base>
+  )
+}
+
+export function ReceiptIcon(props: IconProps) {
+  return (
+    <Base {...props}>
+      <path d="M6 3.5h12v17l-2-1.3-2 1.3-2-1.3-2 1.3-2-1.3-2 1.3v-17Z" />
+      <path d="M8.5 8h7M8.5 11.5h7M8.5 15h4.5" />
+    </Base>
+  )
+}
+
 export const workCategoryIcons: Record<WorkCategoryId | 'brands', (props: IconProps) => JSX.Element> = {
   brands: TagIcon,
   content: CameraIcon,
