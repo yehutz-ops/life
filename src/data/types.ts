@@ -8,7 +8,20 @@ export type ProjectStatus = 'in_progress' | 'done'
 export type Theme = 'light' | 'dark' | 'system'
 export type InboxSource = 'typed' | 'spoken'
 export type InboxStatus = 'pending' | 'sorted' | 'deleted'
-export type ListType = 'shopping' | 'errands' | 'meetings' | 'studies_admin' | 'content' | 'brands' | 'general' | 'maintenance' | 'bills'
+export type ListType =
+  | 'shopping'
+  | 'errands'
+  | 'meetings'
+  | 'studies_admin'
+  | 'content'
+  | 'brands'
+  | 'general'
+  | 'maintenance'
+  | 'bills'
+  | 'library'
+  | 'quotes'
+  | 'articles'
+  | 'ideas'
 
 export interface Item {
   id: string

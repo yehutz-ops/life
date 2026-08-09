@@ -8,6 +8,8 @@ import DomainPage from './pages/DomainPage'
 import WorkPage from './pages/WorkPage'
 import WorkCategoryPage from './pages/WorkCategoryPage'
 import HouseholdPage from './pages/HouseholdPage'
+import PersonalPage from './pages/PersonalPage'
+import KnowledgeCategoryPage from './pages/KnowledgeCategoryPage'
 import InboxPage from './pages/InboxPage'
 import SearchPage from './pages/SearchPage'
 import SettingsPage from './pages/SettingsPage'
@@ -47,7 +49,8 @@ export default function App() {
                         <Route path="work/brands/:brandId" element={<BrandDetailPage />} />
                         <Route path="work/:categoryId" element={<WorkCategoryPage />} />
                         <Route path="studies" element={<DomainPage domainId="studies" />} />
-                        <Route path="personal" element={<DomainPage domainId="personal" />} />
+                        <Route path="personal" element={<PersonalPage />} />
+                        <Route path="personal/:categoryId" element={<KnowledgeCategoryPage />} />
                         <Route path="household" element={<HouseholdPage />} />
                         <Route path="health" element={<DomainPage domainId="health" />} />
                         <Route path="finance" element={<DomainPage domainId="finance" />} />

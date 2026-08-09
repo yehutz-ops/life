@@ -138,6 +138,80 @@ export function ReceiptIcon(props: IconProps) {
   )
 }
 
+export function PersonIcon(props: IconProps) {
+  return (
+    <Base {...props}>
+      <circle cx="12" cy="8" r="3.5" />
+      <path d="M5 20c0-3.6 3.1-6.5 7-6.5s7 2.9 7 6.5" />
+    </Base>
+  )
+}
+
+export function BookIcon(props: IconProps) {
+  return (
+    <Base {...props}>
+      <path d="M4 5.5c2-1 5-1 7 .3V19c-2-1.3-5-1.3-7-.3Z" />
+      <path d="M20 5.5c-2-1-5-1-7 .3V19c2-1.3 5-1.3 7-.3Z" />
+    </Base>
+  )
+}
+
+export function QuoteIcon(props: IconProps) {
+  return (
+    <Base {...props}>
+      <path d="M7 8.5c-1.7 0-3 1.3-3 3v1.5a2 2 0 0 0 2 2h1.5v-3.5H6c0-1.4.6-2.2 1.8-2.6L7 8.5Z" />
+      <path d="M16 8.5c-1.7 0-3 1.3-3 3v1.5a2 2 0 0 0 2 2h1.5v-3.5H15c0-1.4.6-2.2 1.8-2.6L16 8.5Z" />
+    </Base>
+  )
+}
+
+export function NewsIcon(props: IconProps) {
+  return (
+    <Base {...props}>
+      <rect x="3.5" y="5.5" width="13" height="13" rx="1.3" />
+      <path d="M7 9.5h6M7 12.5h6M7 15.5h3.5" />
+      <path d="M16.5 8.5H19a1 1 0 0 1 1 1v8a1.5 1.5 0 0 1-1.5 1.5H8" />
+    </Base>
+  )
+}
+
+export function BulbIcon(props: IconProps) {
+  return (
+    <Base {...props}>
+      <path d="M9 17.5h6" />
+      <path d="M9.5 20h5" />
+      <path d="M12 3.5a5.7 5.7 0 0 0-3.2 10.4c.6.5 1 1.2 1 2.1h4.4c0-.9.4-1.6 1-2.1A5.7 5.7 0 0 0 12 3.5Z" />
+    </Base>
+  )
+}
+
+export function TargetIcon(props: IconProps) {
+  return (
+    <Base {...props}>
+      <circle cx="12" cy="12" r="8" />
+      <circle cx="12" cy="12" r="4.2" />
+      <circle cx="12" cy="12" r="0.6" fill="currentColor" />
+    </Base>
+  )
+}
+
+export function CompassIcon(props: IconProps) {
+  return (
+    <Base {...props}>
+      <circle cx="12" cy="12" r="8.5" />
+      <path d="M14.8 9.2 13 13l-3.8 1.8L11 11Z" />
+    </Base>
+  )
+}
+
+export function HeartIcon(props: IconProps) {
+  return (
+    <Base {...props}>
+      <path d="M12 19.5s-7-4.4-7-9.7A4.3 4.3 0 0 1 12 7.2a4.3 4.3 0 0 1 7 2.6c0 5.3-7 9.7-7 9.7Z" />
+    </Base>
+  )
+}
+
 export const workCategoryIcons: Record<WorkCategoryId | 'brands', (props: IconProps) => JSX.Element> = {
   brands: TagIcon,
   content: CameraIcon,
