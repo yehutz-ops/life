@@ -1,5 +1,7 @@
 import { Item, Project, InboxEntry } from '../types'
 import { Brand, BrandProduct, BrandCampaign, BrandContentItem, BrandPendingActivity, BrandMediaAsset } from '../brandTypes'
+import { Influencer, InfluencerProduct, InfluencerContent, InfluencerSale } from '../influencerTypes'
+import { Campaign, CampaignCreative } from '../campaignTypes'
 import { STORES, getAll, put, remove, clearStore, getMeta, setMeta } from './database'
 
 export const repository = {
@@ -39,6 +41,30 @@ export const repository = {
   putBrandMediaAsset: (asset: BrandMediaAsset) => put(STORES.brandMediaAssets, asset),
   deleteBrandMediaAsset: (id: string) => remove(STORES.brandMediaAssets, id),
 
+  getAllInfluencers: () => getAll<Influencer>(STORES.influencers),
+  putInfluencer: (influencer: Influencer) => put(STORES.influencers, influencer),
+  deleteInfluencer: (id: string) => remove(STORES.influencers, id),
+
+  getAllInfluencerProducts: () => getAll<InfluencerProduct>(STORES.influencerProducts),
+  putInfluencerProduct: (product: InfluencerProduct) => put(STORES.influencerProducts, product),
+  deleteInfluencerProduct: (id: string) => remove(STORES.influencerProducts, id),
+
+  getAllInfluencerContent: () => getAll<InfluencerContent>(STORES.influencerContent),
+  putInfluencerContent: (content: InfluencerContent) => put(STORES.influencerContent, content),
+  deleteInfluencerContent: (id: string) => remove(STORES.influencerContent, id),
+
+  getAllInfluencerSales: () => getAll<InfluencerSale>(STORES.influencerSales),
+  putInfluencerSale: (sale: InfluencerSale) => put(STORES.influencerSales, sale),
+  deleteInfluencerSale: (id: string) => remove(STORES.influencerSales, id),
+
+  getAllCampaigns: () => getAll<Campaign>(STORES.campaigns),
+  putCampaign: (campaign: Campaign) => put(STORES.campaigns, campaign),
+  deleteCampaign: (id: string) => remove(STORES.campaigns, id),
+
+  getAllCampaignCreatives: () => getAll<CampaignCreative>(STORES.campaignCreatives),
+  putCampaignCreative: (creative: CampaignCreative) => put(STORES.campaignCreatives, creative),
+  deleteCampaignCreative: (id: string) => remove(STORES.campaignCreatives, id),
+
   clearAll: async () => {
     await clearStore(STORES.items)
     await clearStore(STORES.projects)
@@ -49,6 +75,12 @@ export const repository = {
     await clearStore(STORES.brandContentItems)
     await clearStore(STORES.brandPendingActivities)
     await clearStore(STORES.brandMediaAssets)
+    await clearStore(STORES.influencers)
+    await clearStore(STORES.influencerProducts)
+    await clearStore(STORES.influencerContent)
+    await clearStore(STORES.influencerSales)
+    await clearStore(STORES.campaigns)
+    await clearStore(STORES.campaignCreatives)
     await setMeta('seeded', 'true')
   },
 

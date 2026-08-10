@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react'
 export interface QuickAddField {
   key: string
   label: string
-  type: 'text' | 'textarea' | 'select' | 'number'
+  type: 'text' | 'textarea' | 'select' | 'number' | 'date'
   options?: { value: string; label: string }[]
   placeholder?: string
   required?: boolean
@@ -16,23 +16,32 @@ export default function QuickAddPopover({
   open,
   title,
   fields,
+  initialValues,
   onClose,
   onSave,
+  onDelete,
+  deleteLabel = 'מחק',
+  saveLabel = 'שמור',
 }: {
   open: boolean
   title: string
   fields: QuickAddField[]
+  initialValues?: Record<string, string>
   onClose: () => void
   onSave: (values: Record<string, string>) => void
+  onDelete?: () => void
+  deleteLabel?: string
+  saveLabel?: string
 }) {
   const [values, setValues] = useState<Record<string, string>>({})
   const [expanded, setExpanded] = useState(false)
 
   useEffect(() => {
     if (open) {
-      setValues({})
-      setExpanded(false)
+      setValues(initialValues ?? {})
+      setExpanded(fields.some((f) => f.secondary && initialValues?.[f.key]))
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
 
   useEffect(() => {
@@ -95,7 +104,7 @@ export default function QuickAddPopover({
     }
     return (
       <input
-        type={field.type === 'number' ? 'number' : 'text'}
+        type={field.type === 'number' ? 'number' : field.type === 'date' ? 'date' : 'text'}
         value={value}
         onChange={(e) => set(field.key, e.target.value)}
         onKeyDown={(e) => {
@@ -146,11 +155,16 @@ export default function QuickAddPopover({
         )}
 
         <div className="flex gap-3 mt-5">
+          {onDelete && (
+            <button onClick={onDelete} className="px-4 py-2.5 rounded-xl border border-stone-200 dark:border-stone-700 text-sm text-stone-500 dark:text-stone-400">
+              {deleteLabel}
+            </button>
+          )}
           <button onClick={onClose} className="flex-1 py-2.5 rounded-xl border border-stone-200 dark:border-stone-700 text-sm font-medium text-stone-600 dark:text-stone-300">
             ביטול
           </button>
           <button onClick={handleSave} className="flex-1 py-2.5 rounded-xl bg-amber-800 text-white text-sm font-medium hover:bg-amber-900">
-            שמור
+            {saveLabel}
           </button>
         </div>
       </div>

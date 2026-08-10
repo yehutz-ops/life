@@ -1,5 +1,5 @@
 const DB_NAME = 'life-control-center'
-const DB_VERSION = 2
+const DB_VERSION = 3
 
 export const STORES = {
   items: 'items',
@@ -12,6 +12,12 @@ export const STORES = {
   brandContentItems: 'brandContentItems',
   brandPendingActivities: 'brandPendingActivities',
   brandMediaAssets: 'brandMediaAssets',
+  influencers: 'influencers',
+  influencerProducts: 'influencerProducts',
+  influencerContent: 'influencerContent',
+  influencerSales: 'influencerSales',
+  campaigns: 'campaigns',
+  campaignCreatives: 'campaignCreatives',
 } as const
 
 let dbPromise: Promise<IDBDatabase> | null = null
@@ -42,6 +48,13 @@ export function openDB(): Promise<IDBDatabase> {
       if (!db.objectStoreNames.contains(STORES.brandContentItems)) db.createObjectStore(STORES.brandContentItems, { keyPath: 'id' })
       if (!db.objectStoreNames.contains(STORES.brandPendingActivities)) db.createObjectStore(STORES.brandPendingActivities, { keyPath: 'id' })
       if (!db.objectStoreNames.contains(STORES.brandMediaAssets)) db.createObjectStore(STORES.brandMediaAssets, { keyPath: 'id' })
+      // ניהול משפיענים + קמפיינים ממומנים — ישויות עצמאיות, לפי אותה שיטה כמו המותגים.
+      if (!db.objectStoreNames.contains(STORES.influencers)) db.createObjectStore(STORES.influencers, { keyPath: 'id' })
+      if (!db.objectStoreNames.contains(STORES.influencerProducts)) db.createObjectStore(STORES.influencerProducts, { keyPath: 'id' })
+      if (!db.objectStoreNames.contains(STORES.influencerContent)) db.createObjectStore(STORES.influencerContent, { keyPath: 'id' })
+      if (!db.objectStoreNames.contains(STORES.influencerSales)) db.createObjectStore(STORES.influencerSales, { keyPath: 'id' })
+      if (!db.objectStoreNames.contains(STORES.campaigns)) db.createObjectStore(STORES.campaigns, { keyPath: 'id' })
+      if (!db.objectStoreNames.contains(STORES.campaignCreatives)) db.createObjectStore(STORES.campaignCreatives, { keyPath: 'id' })
     }
 
     req.onsuccess = () => resolve(req.result)

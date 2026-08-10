@@ -1,10 +1,12 @@
 import { repository } from './repository'
 import { Item, Project, InboxEntry } from '../types'
 import { Brand, BrandProduct, BrandCampaign, BrandContentItem, BrandPendingActivity, BrandMediaAsset } from '../brandTypes'
+import { Influencer, InfluencerProduct, InfluencerContent, InfluencerSale } from '../influencerTypes'
+import { Campaign, CampaignCreative } from '../campaignTypes'
 
 interface BackupFile {
   exportedAt: string
-  version: 1 | 2
+  version: 1 | 2 | 3
   items: Item[]
   projects: Project[]
   inbox: InboxEntry[]
@@ -14,23 +16,16 @@ interface BackupFile {
   brandContentItems?: BrandContentItem[]
   brandPendingActivities?: BrandPendingActivity[]
   brandMediaAssets?: BrandMediaAsset[]
+  influencers?: Influencer[]
+  influencerProducts?: InfluencerProduct[]
+  influencerContent?: InfluencerContent[]
+  influencerSales?: InfluencerSale[]
+  campaigns?: Campaign[]
+  campaignCreatives?: CampaignCreative[]
 }
 
 async function collectBackupData(): Promise<BackupFile> {
-  const [items, projects, inbox, brands, brandProducts, brandCampaigns, brandContentItems, brandPendingActivities, brandMediaAssets] = await Promise.all([
-    repository.getAllItems(),
-    repository.getAllProjects(),
-    repository.getAllInboxEntries(),
-    repository.getAllBrands(),
-    repository.getAllBrandProducts(),
-    repository.getAllBrandCampaigns(),
-    repository.getAllBrandContentItems(),
-    repository.getAllBrandPendingActivities(),
-    repository.getAllBrandMediaAssets(),
-  ])
-  return {
-    exportedAt: new Date().toISOString(),
-    version: 2,
+  const [
     items,
     projects,
     inbox,
@@ -40,6 +35,47 @@ async function collectBackupData(): Promise<BackupFile> {
     brandContentItems,
     brandPendingActivities,
     brandMediaAssets,
+    influencers,
+    influencerProducts,
+    influencerContent,
+    influencerSales,
+    campaigns,
+    campaignCreatives,
+  ] = await Promise.all([
+    repository.getAllItems(),
+    repository.getAllProjects(),
+    repository.getAllInboxEntries(),
+    repository.getAllBrands(),
+    repository.getAllBrandProducts(),
+    repository.getAllBrandCampaigns(),
+    repository.getAllBrandContentItems(),
+    repository.getAllBrandPendingActivities(),
+    repository.getAllBrandMediaAssets(),
+    repository.getAllInfluencers(),
+    repository.getAllInfluencerProducts(),
+    repository.getAllInfluencerContent(),
+    repository.getAllInfluencerSales(),
+    repository.getAllCampaigns(),
+    repository.getAllCampaignCreatives(),
+  ])
+  return {
+    exportedAt: new Date().toISOString(),
+    version: 3,
+    items,
+    projects,
+    inbox,
+    brands,
+    brandProducts,
+    brandCampaigns,
+    brandContentItems,
+    brandPendingActivities,
+    brandMediaAssets,
+    influencers,
+    influencerProducts,
+    influencerContent,
+    influencerSales,
+    campaigns,
+    campaignCreatives,
   }
 }
 
@@ -87,6 +123,12 @@ export async function importBackup(data: BackupFile) {
     ...(data.brandContentItems ?? []).map((c) => repository.putBrandContentItem(c)),
     ...(data.brandPendingActivities ?? []).map((a) => repository.putBrandPendingActivity(a)),
     ...(data.brandMediaAssets ?? []).map((m) => repository.putBrandMediaAsset(m)),
+    ...(data.influencers ?? []).map((i) => repository.putInfluencer(i)),
+    ...(data.influencerProducts ?? []).map((p) => repository.putInfluencerProduct(p)),
+    ...(data.influencerContent ?? []).map((c) => repository.putInfluencerContent(c)),
+    ...(data.influencerSales ?? []).map((s) => repository.putInfluencerSale(s)),
+    ...(data.campaigns ?? []).map((c) => repository.putCampaign(c)),
+    ...(data.campaignCreatives ?? []).map((cr) => repository.putCampaignCreative(cr)),
   ])
   await repository.markSeeded()
 }

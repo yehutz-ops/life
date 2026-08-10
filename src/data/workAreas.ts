@@ -1,6 +1,6 @@
-import { TagIcon, BulbIcon, TruckIcon, UsersIcon, ChecklistIcon } from '../components/hub/hubIcons'
+import { TagIcon, BulbIcon, TruckIcon, UsersIcon, ChecklistIcon, MegaphoneIcon } from '../components/hub/hubIcons'
 
-export type WorkAreaId = 'brand-promotion' | 'content-ideas' | 'import-shipping' | 'influencers' | 'more'
+export type WorkAreaId = 'brand-promotion' | 'content-ideas' | 'import-shipping' | 'influencers' | 'campaigns' | 'more'
 
 export interface WorkArea {
   id: WorkAreaId
@@ -44,7 +44,15 @@ export const workAreas: WorkArea[] = [
     description: 'יוצרי תוכן ושיתופי פעולה',
     imageSrc: '/hub-images/work/collaborations.jpg',
     icon: UsersIcon,
-    to: '/work/area/influencers',
+    to: '/work/influencers',
+  },
+  {
+    id: 'campaigns',
+    name: 'ניהול קמפיינים',
+    description: 'קמפיינים ממומנים ברשתות',
+    imageSrc: '/hub-images/work/campaigns.jpg',
+    icon: MegaphoneIcon,
+    to: '/work/campaigns',
   },
   {
     id: 'more',

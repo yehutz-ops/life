@@ -19,30 +19,32 @@ const SITE_ACCENT_RING = 'focus-visible:ring-[#92400E]'
 
 // סיווג זמני, פשוט מאוד, רק כדי לתת נתון אמיתי אחד לכל כרטיס — לא מערכת סיווג מלאה.
 // פריטים עם brandId נספרים תחת "קידום מותגים" ולא נכנסים לסיווג הזה כלל.
-function classify(text: string): 'import-shipping' | 'influencers' | 'more' {
+function classify(text: string): 'import-shipping' | 'more' {
   if (/משלוח|ספק|יבוא|DHL/i.test(text)) return 'import-shipping'
   return 'more'
 }
 
 export default function WorkPage() {
-  const { items, toggleDone } = useStore()
+  const { items, toggleDone, influencers, campaigns } = useStore()
   const { openEdit } = useDetailModal()
   const today = todayISO()
 
   const workItems = useMemo(() => items.filter((it) => it.domain === 'work'), [items])
   const activeWork = workItems.filter((it) => isActive(it.status))
-  const nonBrandActive = activeWork.filter((it) => !it.brandId)
+  const nonBrandActive = activeWork.filter((it) => !it.brandId && !it.personName)
 
   const brandOpenCount = activeWork.filter((it) => it.brandId).length
-  const importShippingCount = nonBrandActive.filter((it) => !it.personName && classify(`${it.title} ${it.notes ?? ''}`) === 'import-shipping').length
-  const influencersCount = nonBrandActive.filter((it) => it.personName).length
-  const moreCount = nonBrandActive.filter((it) => !it.personName && classify(`${it.title} ${it.notes ?? ''}`) === 'more').length
+  const importShippingCount = nonBrandActive.filter((it) => classify(`${it.title} ${it.notes ?? ''}`) === 'import-shipping').length
+  const moreCount = nonBrandActive.filter((it) => classify(`${it.title} ${it.notes ?? ''}`) === 'more').length
+  const activeInfluencersCount = influencers.filter((i) => i.status === 'active').length
+  const activeCampaignsCount = campaigns.filter((c) => c.status === 'active').length
 
   const statByAreaId: Record<string, string> = {
     'brand-promotion': `${brandOpenCount} פתוחות`,
     'content-ideas': 'עדיין אין רעיונות',
     'import-shipping': `${importShippingCount} פתוחות`,
-    influencers: `${influencersCount} פתוחות`,
+    influencers: `${activeInfluencersCount} פעילים`,
+    campaigns: `${activeCampaignsCount} פעילים`,
     more: `${moreCount} פתוחות`,
   }
 
