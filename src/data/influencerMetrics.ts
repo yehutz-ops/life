@@ -94,6 +94,7 @@ export function computeInfluencerMonthlyCost(influencer: Influencer, products: I
 export interface InfluencerMonthMetrics {
   cashPayment: number
   productCost: number
+  additionalCampaignCosts: number
   totalCost: number
   revenue: number
   orders: number
@@ -114,6 +115,9 @@ export function computeInfluencerMonthMetrics(
   month: string,
 ): InfluencerMonthMetrics {
   const cost = computeInfluencerMonthlyCost(influencer, products, month)
+  const additionalCampaignCosts = sale?.additionalCampaignCosts ?? 0
+  // Total Influencer Cost = תשלום מזומן + עלות עסקית בפועל של מוצרים + עלויות קמפיין נוספות (לא מחיר קמעונאי).
+  const totalCost = cost.totalCost + additionalCampaignCosts
   const revenue = sale?.revenue ?? 0
   const orders = sale?.orders ?? 0
   const publishedThisMonth = content.filter(
@@ -127,11 +131,12 @@ export function computeInfluencerMonthMetrics(
   return {
     cashPayment: cost.cashPayment,
     productCost: cost.productCost,
-    totalCost: cost.totalCost,
+    additionalCampaignCosts,
+    totalCost,
     revenue,
     orders,
-    roas: safeDiv(revenue, cost.totalCost),
-    costPerOrder: safeDiv(cost.totalCost, orders),
+    roas: safeDiv(revenue, totalCost),
+    costPerOrder: safeDiv(totalCost, orders),
     revenuePerContent: safeDiv(revenue, contentCompleted.total),
     totalViews,
     engagementRate: safeDiv(engagement, reachOrViews),

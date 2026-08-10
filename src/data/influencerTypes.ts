@@ -96,6 +96,8 @@ export interface InfluencerSale {
   orders?: number
   unitsSold?: number
   revenue?: number
+  // עלויות קמפיין נוספות מעבר לתשלום החודשי ולעלות המוצרים — למשל בוסט בתשלום לפוסט של המשפיען.
+  additionalCampaignCosts?: number
   productSales?: InfluencerProductSale[]
   createdAt: string
   updatedAt: string

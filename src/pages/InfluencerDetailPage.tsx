@@ -383,6 +383,7 @@ export default function InfluencerDetailPage() {
       orders: values.orders ? Number(values.orders) : undefined,
       unitsSold: values.unitsSold ? Number(values.unitsSold) : undefined,
       revenue: values.revenue ? Number(values.revenue) : undefined,
+      additionalCampaignCosts: values.additionalCampaignCosts ? Number(values.additionalCampaignCosts) : undefined,
     })
     setSaleModalOpen(false)
   }
@@ -726,6 +727,12 @@ export default function InfluencerDetailPage() {
                   <dt className="text-xs text-stone-400 dark:text-stone-500">עלות מוצרים</dt>
                   <dd className="text-stone-700 dark:text-stone-200 font-medium">{formatILS(metrics.productCost)}</dd>
                 </div>
+                {metrics.additionalCampaignCosts > 0 && (
+                  <div>
+                    <dt className="text-xs text-stone-400 dark:text-stone-500">עלויות קמפיין נוספות</dt>
+                    <dd className="text-stone-700 dark:text-stone-200 font-medium">{formatILS(metrics.additionalCampaignCosts)}</dd>
+                  </div>
+                )}
                 <div>
                   <dt className="text-xs text-stone-400 dark:text-stone-500">עלות כוללת</dt>
                   <dd className="text-stone-700 dark:text-stone-200 font-medium">{formatILS(metrics.totalCost)}</dd>
@@ -867,12 +874,14 @@ export default function InfluencerDetailPage() {
           { key: 'orders', label: 'הזמנות', type: 'number' },
           { key: 'unitsSold', label: 'יחידות שנמכרו', type: 'number' },
           { key: 'revenue', label: 'הכנסה (₪)', type: 'number' },
+          { key: 'additionalCampaignCosts', label: 'עלויות קמפיין נוספות (₪)', type: 'number', secondary: true },
         ]}
         initialValues={{
           couponUses: sale?.couponUses !== undefined ? String(sale.couponUses) : '',
           orders: sale?.orders !== undefined ? String(sale.orders) : '',
           unitsSold: sale?.unitsSold !== undefined ? String(sale.unitsSold) : '',
           revenue: sale?.revenue !== undefined ? String(sale.revenue) : '',
+          additionalCampaignCosts: sale?.additionalCampaignCosts !== undefined ? String(sale.additionalCampaignCosts) : '',
         }}
         onClose={() => setSaleModalOpen(false)}
         onSave={handleSaveSale}

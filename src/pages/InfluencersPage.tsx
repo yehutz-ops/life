@@ -63,6 +63,7 @@ export default function InfluencersPage() {
 
   const kpis = useMemo(() => {
     const activeInfluencers = influencers.filter((i) => i.status === 'active').length
+    const cashCost = rows.reduce((sum, r) => sum + r.metrics.cashPayment, 0)
     const totalCost = rows.reduce((sum, r) => sum + r.metrics.totalCost, 0)
     const productCost = rows.reduce((sum, r) => sum + r.metrics.productCost, 0)
     const contentCommitted = rows.filter((r) => r.influencer.status === 'active').reduce((sum, r) => sum + r.metrics.contentRequired.total, 0)
@@ -70,7 +71,7 @@ export default function InfluencersPage() {
     const totalViews = rows.reduce((sum, r) => sum + r.metrics.totalViews, 0)
     const totalRevenue = rows.reduce((sum, r) => sum + r.metrics.revenue, 0)
     const avgRoas = safeDiv(totalRevenue, totalCost)
-    return { activeInfluencers, totalCost, productCost, contentCommitted, contentPublished, totalViews, totalRevenue, avgRoas }
+    return { activeInfluencers, cashCost, totalCost, productCost, contentCommitted, contentPublished, totalViews, totalRevenue, avgRoas }
   }, [rows])
 
   const sortedRows = useMemo(() => {
@@ -158,7 +159,7 @@ export default function InfluencersPage() {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
           { label: 'משפיענים פעילים', value: String(kpis.activeInfluencers) },
-          { label: 'עלות חודשית כוללת', value: formatILS(kpis.totalCost) },
+          { label: 'עלות מזומן חודשית', value: formatILS(kpis.cashCost) },
           { label: 'עלות מוצרים שנשלחו', value: formatILS(kpis.productCost) },
           { label: 'תכנים שהתחייבנו', value: String(kpis.contentCommitted) },
           { label: 'תכנים שפורסמו', value: String(kpis.contentPublished) },

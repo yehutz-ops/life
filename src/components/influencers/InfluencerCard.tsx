@@ -51,10 +51,18 @@ export default function InfluencerCard({
           <div className="min-w-0">
             <div className="font-semibold text-sm text-stone-800 dark:text-stone-100 truncate">{influencer.name}</div>
             <div className="text-xs text-stone-400 dark:text-stone-500 truncate">
-              {[influencer.instagramHandle && `@${influencer.instagramHandle}`, influencer.tiktokHandle && `@${influencer.tiktokHandle}`]
-                .filter(Boolean)
-                .join(' · ') || (influencer.followers ? `${formatCompact(influencer.followers)} עוקבים` : '—')}
+              {[influencer.instagramHandle && `@${influencer.instagramHandle}`, influencer.tiktokHandle && `@${influencer.tiktokHandle}`].filter(Boolean).join(' · ') || '—'}
             </div>
+            {(influencer.followers !== undefined || influencer.agreement?.monthlyPayment !== undefined) && (
+              <div className="text-xs text-stone-400 dark:text-stone-500 truncate">
+                {[
+                  influencer.followers !== undefined ? `${formatCompact(influencer.followers)} עוקבים` : undefined,
+                  influencer.agreement?.monthlyPayment !== undefined ? `${formatILS(influencer.agreement.monthlyPayment)}/חודש` : undefined,
+                ]
+                  .filter(Boolean)
+                  .join(' · ')}
+              </div>
+            )}
           </div>
         </div>
         <StatusPill label={STATUS_LABEL[influencer.status]} tone={STATUS_TONE[influencer.status]} className="shrink-0" />
