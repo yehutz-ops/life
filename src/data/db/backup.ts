@@ -4,10 +4,11 @@ import { Brand, BrandProduct, BrandCampaign, BrandContentItem, BrandPendingActiv
 import { Influencer, InfluencerProduct, InfluencerContent, InfluencerSale } from '../influencerTypes'
 import { Campaign, CampaignCreative } from '../campaignTypes'
 import { Shipment, ShipmentQuote, ShipmentDocument, ShipmentTimelineEvent, Forwarder } from '../shipmentTypes'
+import { MediaAsset, IdeaBankItem, ContentPiece, VideoScript, ContentRule, PromotionPlan } from '../contentStudioTypes'
 
 interface BackupFile {
   exportedAt: string
-  version: 1 | 2 | 3 | 4
+  version: 1 | 2 | 3 | 4 | 5
   items: Item[]
   projects: Project[]
   inbox: InboxEntry[]
@@ -30,6 +31,12 @@ interface BackupFile {
   forwarders?: Forwarder[]
   brandContacts?: BrandContact[]
   brandDocuments?: BrandDocument[]
+  contentMediaAssets?: MediaAsset[]
+  ideaBankItems?: IdeaBankItem[]
+  contentPieces?: ContentPiece[]
+  videoScripts?: VideoScript[]
+  contentRules?: ContentRule[]
+  promotionPlans?: PromotionPlan[]
 }
 
 async function collectBackupData(): Promise<BackupFile> {
@@ -56,6 +63,12 @@ async function collectBackupData(): Promise<BackupFile> {
     forwarders,
     brandContacts,
     brandDocuments,
+    contentMediaAssets,
+    ideaBankItems,
+    contentPieces,
+    videoScripts,
+    contentRules,
+    promotionPlans,
   ] = await Promise.all([
     repository.getAllItems(),
     repository.getAllProjects(),
@@ -79,10 +92,16 @@ async function collectBackupData(): Promise<BackupFile> {
     repository.getAllForwarders(),
     repository.getAllBrandContacts(),
     repository.getAllBrandDocuments(),
+    repository.getAllContentMediaAssets(),
+    repository.getAllIdeaBankItems(),
+    repository.getAllContentPieces(),
+    repository.getAllVideoScripts(),
+    repository.getAllContentRules(),
+    repository.getAllPromotionPlans(),
   ])
   return {
     exportedAt: new Date().toISOString(),
-    version: 4,
+    version: 5,
     items,
     projects,
     inbox,
@@ -105,6 +124,12 @@ async function collectBackupData(): Promise<BackupFile> {
     forwarders,
     brandContacts,
     brandDocuments,
+    contentMediaAssets,
+    ideaBankItems,
+    contentPieces,
+    videoScripts,
+    contentRules,
+    promotionPlans,
   }
 }
 
@@ -165,6 +190,12 @@ export async function importBackup(data: BackupFile) {
     ...(data.forwarders ?? []).map((f) => repository.putForwarder(f)),
     ...(data.brandContacts ?? []).map((c) => repository.putBrandContact(c)),
     ...(data.brandDocuments ?? []).map((d) => repository.putBrandDocument(d)),
+    ...(data.contentMediaAssets ?? []).map((m) => repository.putContentMediaAsset(m)),
+    ...(data.ideaBankItems ?? []).map((i) => repository.putIdeaBankItem(i)),
+    ...(data.contentPieces ?? []).map((c) => repository.putContentPiece(c)),
+    ...(data.videoScripts ?? []).map((s) => repository.putVideoScript(s)),
+    ...(data.contentRules ?? []).map((r) => repository.putContentRule(r)),
+    ...(data.promotionPlans ?? []).map((p) => repository.putPromotionPlan(p)),
   ])
   await repository.markSeeded()
 }

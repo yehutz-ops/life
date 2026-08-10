@@ -1,5 +1,9 @@
 const DB_NAME = 'life-control-center'
-const DB_VERSION = 4
+// גרסה 5 נרשמה פעם אחת בדפדפן לפני שקוד יצירת המחסנים החדשים (Content Studio) הספיק להיטען
+// במלואו (תוצר לוואי של עריכה חיה תוך כדי בדיקה) — IndexedDB לא מפעיל onupgradeneeded שוב
+// לאותה גרסה, אז המחסנים החסרים היו נשארים לצמיתות. גרסה 6 מפעילה שוב את יצירת המחסנים
+// (idempotent בזכות בדיקות ה-contains) בלי להשפיע על נתונים קיימים.
+const DB_VERSION = 6
 
 export const STORES = {
   items: 'items',
@@ -25,6 +29,12 @@ export const STORES = {
   forwarders: 'forwarders',
   brandContacts: 'brandContacts',
   brandDocuments: 'brandDocuments',
+  contentMediaAssets: 'contentMediaAssets',
+  ideaBankItems: 'ideaBankItems',
+  contentPieces: 'contentPieces',
+  videoScripts: 'videoScripts',
+  contentRules: 'contentRules',
+  promotionPlans: 'promotionPlans',
 } as const
 
 let dbPromise: Promise<IDBDatabase> | null = null
@@ -70,6 +80,13 @@ export function openDB(): Promise<IDBDatabase> {
       if (!db.objectStoreNames.contains(STORES.forwarders)) db.createObjectStore(STORES.forwarders, { keyPath: 'id' })
       if (!db.objectStoreNames.contains(STORES.brandContacts)) db.createObjectStore(STORES.brandContacts, { keyPath: 'id' })
       if (!db.objectStoreNames.contains(STORES.brandDocuments)) db.createObjectStore(STORES.brandDocuments, { keyPath: 'id' })
+      // סטודיו תוכן — ספריית מדיה, מאגר רעיונות, תוכן מתוכנן/שפורסם, תסריטים, כללי תוכן ותוכנית קידום.
+      if (!db.objectStoreNames.contains(STORES.contentMediaAssets)) db.createObjectStore(STORES.contentMediaAssets, { keyPath: 'id' })
+      if (!db.objectStoreNames.contains(STORES.ideaBankItems)) db.createObjectStore(STORES.ideaBankItems, { keyPath: 'id' })
+      if (!db.objectStoreNames.contains(STORES.contentPieces)) db.createObjectStore(STORES.contentPieces, { keyPath: 'id' })
+      if (!db.objectStoreNames.contains(STORES.videoScripts)) db.createObjectStore(STORES.videoScripts, { keyPath: 'id' })
+      if (!db.objectStoreNames.contains(STORES.contentRules)) db.createObjectStore(STORES.contentRules, { keyPath: 'id' })
+      if (!db.objectStoreNames.contains(STORES.promotionPlans)) db.createObjectStore(STORES.promotionPlans, { keyPath: 'id' })
     }
 
     req.onsuccess = () => {

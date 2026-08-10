@@ -24,6 +24,12 @@ import SettingsPage from './pages/SettingsPage'
 import BrandsPage from './pages/BrandsPage'
 import BrandImportPage from './pages/BrandImportPage'
 import BrandDetailPage from './pages/BrandDetailPage'
+import IdeaBankPage from './pages/IdeaBankPage'
+import VideoScriptsPage from './pages/VideoScriptsPage'
+import TodayContentPage from './pages/TodayContentPage'
+import ContentCalendarPage from './pages/ContentCalendarPage'
+import ContentAnalyticsPage from './pages/ContentAnalyticsPage'
+import CreativeToolsPage from './pages/CreativeToolsPage'
 import { StoreProvider } from './data/StoreContext'
 import { QuickAddProvider } from './data/QuickAddContext'
 import { DetailModalProvider } from './data/DetailModalContext'
@@ -61,6 +67,12 @@ export default function App() {
                         <Route path="work/campaigns/:campaignId" element={<CampaignDetailPage />} />
                         <Route path="work/shipments" element={<ShipmentsPage />} />
                         <Route path="work/shipments/:shipmentId" element={<ShipmentDetailPage />} />
+                        <Route path="work/ideas" element={<IdeaBankPage />} />
+                        <Route path="work/scripts" element={<VideoScriptsPage />} />
+                        <Route path="work/today" element={<TodayContentPage />} />
+                        <Route path="work/content-calendar" element={<ContentCalendarPage />} />
+                        <Route path="work/content-analytics" element={<ContentAnalyticsPage />} />
+                        <Route path="work/creative-tools" element={<CreativeToolsPage />} />
                         <Route path="work/area/:areaId" element={<WorkAreaComingSoonPage />} />
                         <Route path="work/:categoryId" element={<WorkCategoryPage />} />
                         <Route path="studies" element={<DomainPage domainId="studies" />} />

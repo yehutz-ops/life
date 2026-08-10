@@ -3,6 +3,7 @@ import { Brand, BrandProduct, BrandCampaign, BrandContentItem, BrandPendingActiv
 import { Influencer, InfluencerProduct, InfluencerContent, InfluencerSale } from '../influencerTypes'
 import { Campaign, CampaignCreative } from '../campaignTypes'
 import { Shipment, ShipmentQuote, ShipmentDocument, ShipmentTimelineEvent, Forwarder } from '../shipmentTypes'
+import { MediaAsset, IdeaBankItem, ContentPiece, VideoScript, ContentRule, PromotionPlan } from '../contentStudioTypes'
 import { STORES, getAll, put, remove, clearStore, getMeta, setMeta } from './database'
 
 export const repository = {
@@ -94,6 +95,30 @@ export const repository = {
   putBrandDocument: (doc: BrandDocument) => put(STORES.brandDocuments, doc),
   deleteBrandDocument: (id: string) => remove(STORES.brandDocuments, id),
 
+  getAllContentMediaAssets: () => getAll<MediaAsset>(STORES.contentMediaAssets),
+  putContentMediaAsset: (asset: MediaAsset) => put(STORES.contentMediaAssets, asset),
+  deleteContentMediaAsset: (id: string) => remove(STORES.contentMediaAssets, id),
+
+  getAllIdeaBankItems: () => getAll<IdeaBankItem>(STORES.ideaBankItems),
+  putIdeaBankItem: (item: IdeaBankItem) => put(STORES.ideaBankItems, item),
+  deleteIdeaBankItem: (id: string) => remove(STORES.ideaBankItems, id),
+
+  getAllContentPieces: () => getAll<ContentPiece>(STORES.contentPieces),
+  putContentPiece: (piece: ContentPiece) => put(STORES.contentPieces, piece),
+  deleteContentPiece: (id: string) => remove(STORES.contentPieces, id),
+
+  getAllVideoScripts: () => getAll<VideoScript>(STORES.videoScripts),
+  putVideoScript: (script: VideoScript) => put(STORES.videoScripts, script),
+  deleteVideoScript: (id: string) => remove(STORES.videoScripts, id),
+
+  getAllContentRules: () => getAll<ContentRule>(STORES.contentRules),
+  putContentRule: (rule: ContentRule) => put(STORES.contentRules, rule),
+  deleteContentRule: (id: string) => remove(STORES.contentRules, id),
+
+  getAllPromotionPlans: () => getAll<PromotionPlan>(STORES.promotionPlans),
+  putPromotionPlan: (plan: PromotionPlan) => put(STORES.promotionPlans, plan),
+  deletePromotionPlan: (id: string) => remove(STORES.promotionPlans, id),
+
   clearAll: async () => {
     await clearStore(STORES.items)
     await clearStore(STORES.projects)
@@ -117,6 +142,12 @@ export const repository = {
     await clearStore(STORES.forwarders)
     await clearStore(STORES.brandContacts)
     await clearStore(STORES.brandDocuments)
+    await clearStore(STORES.contentMediaAssets)
+    await clearStore(STORES.ideaBankItems)
+    await clearStore(STORES.contentPieces)
+    await clearStore(STORES.videoScripts)
+    await clearStore(STORES.contentRules)
+    await clearStore(STORES.promotionPlans)
     await setMeta('seeded', 'true')
   },
 

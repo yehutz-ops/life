@@ -7,9 +7,11 @@ import QuickAddPopover, { QuickAddField } from '../components/hub/QuickAddPopove
 import { useConfirm } from '../data/ConfirmContext'
 import { BrandContact, BrandDocument, BrandDocCategory, BrandProduct } from '../data/brandTypes'
 import { ShipmentStatus } from '../data/shipmentTypes'
+import { MediaAsset, MediaAssetCategory, ContentRule, ContentRuleType } from '../data/contentStudioTypes'
+import { todayISO } from '../utils/date'
 
-type GroupKey = 'overview' | 'products' | 'content' | 'campaigns' | 'contacts' | 'shipments' | 'documents' | 'media' | 'tasks'
-const GROUP_KEYS: GroupKey[] = ['overview', 'products', 'content', 'campaigns', 'contacts', 'shipments', 'documents', 'media', 'tasks']
+type GroupKey = 'overview' | 'products' | 'content' | 'campaigns' | 'contacts' | 'shipments' | 'documents' | 'media' | 'library' | 'rules' | 'promotion' | 'tasks'
+const GROUP_KEYS: GroupKey[] = ['overview', 'products', 'content', 'campaigns', 'contacts', 'shipments', 'documents', 'media', 'library', 'rules', 'promotion', 'tasks']
 
 const GROUPS: { key: GroupKey; label: string }[] = [
   { key: 'overview', label: 'סקירה' },
@@ -20,8 +22,28 @@ const GROUPS: { key: GroupKey; label: string }[] = [
   { key: 'shipments', label: 'הזמנות ומשלוחים' },
   { key: 'documents', label: 'מסמכים' },
   { key: 'media', label: 'מדיה ושיתופי פעולה' },
+  { key: 'library', label: 'ספריית תוכן' },
+  { key: 'rules', label: 'כללי תוכן' },
+  { key: 'promotion', label: 'תוכנית קידום' },
   { key: 'tasks', label: 'משימות ותפעול' },
 ]
+
+const MEDIA_CATEGORY_LABEL: Record<MediaAssetCategory, string> = {
+  raw_media: 'חומר גלם',
+  brand_asset: 'נכסי מותג',
+  inspiration: 'השראה / רפרנסים',
+  previous_content: 'תוכן קודם',
+}
+
+const RULE_TYPE_LABEL: Record<ContentRuleType, string> = {
+  tone: 'טון דיבור',
+  words_to_avoid: 'מילים להימנע מהן',
+  claims: 'טענות אסורות',
+  price_rules: 'כללי מחיר',
+  promotion_rules: 'כללי קידום מכירות',
+  visual_rules: 'כללים ויזואליים',
+  other: 'אחר',
+}
 
 // תווית עברית ידידותית למפתחות ידועים; מפתח לא מוכר מוצג כמו שהוא (כדי להישאר גנרי לכל מותג עתידי).
 const FIELD_LABELS: Record<string, string> = {
@@ -232,6 +254,10 @@ export default function BrandDetailPage() {
     brandDocuments,
     shipments,
     items,
+    contentMediaAssets,
+    contentRules,
+    promotionPlans,
+    contentPieces,
     updateBrand,
     addBrandProduct,
     updateBrandProduct,
@@ -241,6 +267,11 @@ export default function BrandDetailPage() {
     deleteBrandContact,
     addBrandDocument,
     deleteBrandDocument,
+    addContentMediaAsset,
+    deleteContentMediaAsset,
+    addContentRule,
+    deleteContentRule,
+    addOrUpdatePromotionPlan,
   } = useStore()
   const tabParam = searchParams.get('tab') as GroupKey | null
   const highlightContentId = searchParams.get('item')
@@ -249,6 +280,10 @@ export default function BrandDetailPage() {
   const [productModal, setProductModal] = useState<{ open: boolean; editingId?: string }>({ open: false })
   const [contactModal, setContactModal] = useState<{ open: boolean; editingId?: string }>({ open: false })
   const [docOpen, setDocOpen] = useState(false)
+  const [libraryFilter, setLibraryFilter] = useState<MediaAssetCategory | 'all'>('all')
+  const [libraryOpen, setLibraryOpen] = useState(false)
+  const [ruleOpen, setRuleOpen] = useState(false)
+  const [promotionOpen, setPromotionOpen] = useState(false)
 
   const brand = brands.find((b) => b.id === brandId)
 
@@ -270,6 +305,27 @@ export default function BrandDetailPage() {
   const brandShipments = [...shipments.filter((s) => s.brandId === brand.id)].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
   const tasks = items.filter((it) => it.brandId === brand.id)
   const awaitingApproval = contentItems.filter((c) => c.awaitingApproval)
+  const libraryAssets = contentMediaAssets.filter((m) => m.brandId === brand.id && (libraryFilter === 'all' || m.category === libraryFilter))
+  const brandRules = contentRules.filter((r) => r.brandId === brand.id)
+  const promotionPlan = promotionPlans.find((p) => p.brandId === brand.id)
+
+  // "השבוע" = ראשון עד שבת נוכחי, לחישוב "הושלם/נותר" חי מתוך פיסות תוכן שכבר פורסמו.
+  const weekStart = new Date(todayISO() + 'T00:00:00')
+  weekStart.setDate(weekStart.getDate() - weekStart.getDay())
+  const weekStartISO = weekStart.toISOString().slice(0, 10)
+  const weekEnd = new Date(weekStart)
+  weekEnd.setDate(weekEnd.getDate() + 6)
+  const weekEndISO = weekEnd.toISOString().slice(0, 10)
+  const publishedThisWeek = contentPieces.filter(
+    (c) => c.brandId === brand.id && c.status === 'published' && c.publishDate && c.publishDate >= weekStartISO && c.publishDate <= weekEndISO,
+  )
+  const weeklyCompleted = {
+    reel: publishedThisWeek.filter((c) => c.contentType === 'reel').length,
+    story: publishedThisWeek.filter((c) => c.contentType === 'story').length,
+    carousel: publishedThisWeek.filter((c) => c.contentType === 'carousel').length,
+    post: publishedThisWeek.filter((c) => c.contentType === 'post').length,
+    tiktok: publishedThisWeek.filter((c) => c.contentType === 'tiktok').length,
+  }
 
   const fields = brand.fields as Record<string, unknown>
   const marketingStrategy = (fields.marketingStrategy ?? {}) as Record<string, unknown>
@@ -395,6 +451,45 @@ export default function BrandDetailPage() {
       notes: values.notes?.trim() || undefined,
     })
     setDocOpen(false)
+  }
+
+  async function handleAddLibraryAsset(values: Record<string, string>) {
+    const data: Omit<MediaAsset, 'id' | 'createdAt' | 'updatedAt'> = {
+      brandId: brand!.id,
+      category: (values.category as MediaAssetCategory) || 'raw_media',
+      name: values.name?.trim(),
+      url: values.url?.trim() || undefined,
+      productId: values.productId || undefined,
+      source: values.source?.trim() || undefined,
+      whyILike: values.whyILike?.trim() || undefined,
+      tags: values.tags?.trim() ? values.tags.split(',').map((t) => t.trim()).filter(Boolean) : undefined,
+      notes: values.notes?.trim() || undefined,
+    }
+    await addContentMediaAsset(data)
+    setLibraryOpen(false)
+  }
+
+  async function handleAddRule(values: Record<string, string>) {
+    const data: Omit<ContentRule, 'id' | 'createdAt' | 'updatedAt'> = {
+      brandId: brand!.id,
+      ruleType: (values.ruleType as ContentRuleType) || 'other',
+      text: values.text?.trim(),
+    }
+    await addContentRule(data)
+    setRuleOpen(false)
+  }
+
+  async function handleSavePromotion(values: Record<string, string>) {
+    await addOrUpdatePromotionPlan(brand!.id, {
+      priority: (values.priority as 'high' | 'medium' | 'low') || 'medium',
+      weeklyReels: values.weeklyReels ? Number(values.weeklyReels) : undefined,
+      weeklyStories: values.weeklyStories ? Number(values.weeklyStories) : undefined,
+      weeklyCarousels: values.weeklyCarousels ? Number(values.weeklyCarousels) : undefined,
+      weeklyPosts: values.weeklyPosts ? Number(values.weeklyPosts) : undefined,
+      weeklyTiktoks: values.weeklyTiktoks ? Number(values.weeklyTiktoks) : undefined,
+      notes: values.notes?.trim() || undefined,
+    })
+    setPromotionOpen(false)
   }
 
   return (
@@ -657,6 +752,126 @@ export default function BrandDetailPage() {
         </div>
       )}
 
+      {group === 'library' && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <div className="flex flex-wrap gap-2">
+              <FilterChip active={libraryFilter === 'all'} onClick={() => setLibraryFilter('all')}>
+                הכול
+              </FilterChip>
+              {(Object.keys(MEDIA_CATEGORY_LABEL) as MediaAssetCategory[]).map((c) => (
+                <FilterChip key={c} active={libraryFilter === c} onClick={() => setLibraryFilter(c)}>
+                  {MEDIA_CATEGORY_LABEL[c]}
+                </FilterChip>
+              ))}
+            </div>
+            <button onClick={() => setLibraryOpen(true)} className="text-xs font-medium text-amber-800 dark:text-amber-400 hover:underline">
+              + הוסף לספרייה
+            </button>
+          </div>
+          <Card className="!p-0 overflow-hidden">
+            <ul className="divide-y divide-stone-50 dark:divide-stone-800 px-5">
+              {libraryAssets.length === 0 && <EmptyLine text="עדיין אין חומרים בספרייה" />}
+              {libraryAssets.map((m) => (
+                <li key={m.id} className="py-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-sm font-medium text-stone-800 dark:text-stone-100">{m.name}</span>
+                    <div className="flex items-center gap-2 shrink-0">
+                      {m.url && (
+                        <a href={m.url} target="_blank" rel="noreferrer" className="text-xs text-amber-800 dark:text-amber-400 hover:underline">
+                          פתח
+                        </a>
+                      )}
+                      <button onClick={() => deleteContentMediaAsset(m.id)} className="text-stone-300 hover:text-red-500" aria-label="מחק">
+                        ✕
+                      </button>
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2 mt-1 text-xs text-stone-400 dark:text-stone-500">
+                    <span>{MEDIA_CATEGORY_LABEL[m.category]}</span>
+                    {m.source && <span>· {m.source}</span>}
+                    {m.whyILike && <span>· {m.whyILike}</span>}
+                    {m.tags && m.tags.length > 0 && <span>· {m.tags.join(', ')}</span>}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </Card>
+        </div>
+      )}
+
+      {group === 'rules' && (
+        <Card className="!p-0 overflow-hidden">
+          <div className="flex items-center justify-between p-5 pb-3">
+            <h3 className="text-sm font-bold text-stone-800 dark:text-stone-100">כללי תוכן</h3>
+            <button onClick={() => setRuleOpen(true)} className="text-xs font-medium text-amber-800 dark:text-amber-400 hover:underline">
+              + הוסף כלל
+            </button>
+          </div>
+          <p className="text-xs text-stone-400 dark:text-stone-500 px-5 pb-3">
+            אין להמציא מבצע, מלאי מוגבל, מחיר מיוחד, בלעדיות או עובדות על מוצר — אלא אם המידע מופיע בנתוני המוצר/מותג או שאושר במפורש.
+          </p>
+          <ul className="divide-y divide-stone-50 dark:divide-stone-800 px-5">
+            {brandRules.length === 0 && <EmptyLine text="עדיין אין כללים שמורים" />}
+            {brandRules.map((r) => (
+              <li key={r.id} className="py-2.5 flex items-center justify-between gap-2 text-sm">
+                <div>
+                  <span className="text-xs text-stone-400 dark:text-stone-500">{RULE_TYPE_LABEL[r.ruleType]}</span>
+                  <div className="text-stone-800 dark:text-stone-100">{r.text}</div>
+                </div>
+                <button onClick={() => deleteContentRule(r.id)} className="text-stone-300 hover:text-red-500 shrink-0" aria-label="מחק">
+                  ✕
+                </button>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
+
+      {group === 'promotion' && (
+        <Card>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-base font-bold text-stone-900 dark:text-stone-100">תוכנית קידום שבועית</h2>
+            <button onClick={() => setPromotionOpen(true)} className="text-xs font-medium text-amber-800 dark:text-amber-400 hover:underline">
+              ערוך
+            </button>
+          </div>
+          {!promotionPlan ? (
+            <EmptyLine text="עדיין לא הוגדרה תוכנית קידום למותג הזה" />
+          ) : (
+            <>
+              <div className="mb-4">
+                <StatusPill
+                  label={promotionPlan.priority === 'high' ? 'עדיפות גבוהה' : promotionPlan.priority === 'medium' ? 'עדיפות בינונית' : 'עדיפות נמוכה'}
+                  tone={promotionPlan.priority === 'high' ? 'alert' : promotionPlan.priority === 'medium' ? 'warm' : 'neutral'}
+                />
+              </div>
+              <dl className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-sm">
+                {[
+                  ['Reels', promotionPlan.weeklyReels, weeklyCompleted.reel],
+                  ['Stories', promotionPlan.weeklyStories, weeklyCompleted.story],
+                  ['Carousels', promotionPlan.weeklyCarousels, weeklyCompleted.carousel],
+                  ['Posts', promotionPlan.weeklyPosts, weeklyCompleted.post],
+                  ['TikTok', promotionPlan.weeklyTiktoks, weeklyCompleted.tiktok],
+                ]
+                  .filter(([, target]) => target !== undefined)
+                  .map(([label, target, done]) => (
+                    <div key={label as string}>
+                      <dt className="text-xs text-stone-400 dark:text-stone-500">{label}</dt>
+                      <dd className="text-stone-700 dark:text-stone-200 font-medium">
+                        {done as number}/{target as number} השבוע
+                      </dd>
+                    </div>
+                  ))}
+              </dl>
+              {promotionPlan.notes && (
+                <div className="mt-4 pt-4 border-t border-stone-100 dark:border-stone-800 text-sm text-stone-700 dark:text-stone-200">{promotionPlan.notes}</div>
+              )}
+            </>
+          )}
+        </Card>
+      )}
+
       {group === 'tasks' && (
         <div className="space-y-4">
           <Card className="!p-0 overflow-hidden">
@@ -753,6 +968,80 @@ export default function BrandDetailPage() {
         ]}
         onClose={() => setDocOpen(false)}
         onSave={handleAddDocument}
+      />
+
+      <QuickAddPopover
+        open={libraryOpen}
+        title="הוספה לספריית תוכן"
+        fields={[
+          {
+            key: 'category',
+            label: 'קטגוריה',
+            type: 'select',
+            required: true,
+            options: (Object.keys(MEDIA_CATEGORY_LABEL) as MediaAssetCategory[]).map((c) => ({ value: c, label: MEDIA_CATEGORY_LABEL[c] })),
+          },
+          { key: 'name', label: 'שם', type: 'text', required: true },
+          { key: 'url', label: 'קישור / קובץ', type: 'text' },
+          { key: 'productId', label: 'מוצר קשור', type: 'select', secondary: true, options: products.map((p) => ({ value: p.id, label: p.name })) },
+          { key: 'source', label: 'מקור', type: 'text', secondary: true },
+          { key: 'whyILike', label: 'למה זה מוצא חן בעיניי', type: 'textarea', secondary: true },
+          { key: 'tags', label: 'תגיות (מופרדות בפסיקים)', type: 'text', secondary: true },
+          { key: 'notes', label: 'הערות', type: 'textarea', secondary: true },
+        ]}
+        onClose={() => setLibraryOpen(false)}
+        onSave={handleAddLibraryAsset}
+      />
+
+      <QuickAddPopover
+        open={ruleOpen}
+        title="הוספת כלל תוכן"
+        fields={[
+          {
+            key: 'ruleType',
+            label: 'סוג כלל',
+            type: 'select',
+            required: true,
+            options: (Object.keys(RULE_TYPE_LABEL) as ContentRuleType[]).map((t) => ({ value: t, label: RULE_TYPE_LABEL[t] })),
+          },
+          { key: 'text', label: 'הכלל', type: 'textarea', required: true },
+        ]}
+        onClose={() => setRuleOpen(false)}
+        onSave={handleAddRule}
+      />
+
+      <QuickAddPopover
+        open={promotionOpen}
+        title="עריכת תוכנית קידום"
+        fields={[
+          {
+            key: 'priority',
+            label: 'עדיפות',
+            type: 'select',
+            options: [
+              { value: 'high', label: 'גבוהה' },
+              { value: 'medium', label: 'בינונית' },
+              { value: 'low', label: 'נמוכה' },
+            ],
+          },
+          { key: 'weeklyReels', label: 'Reels לשבוע', type: 'number' },
+          { key: 'weeklyStories', label: 'Stories לשבוע', type: 'number' },
+          { key: 'weeklyCarousels', label: 'Carousels לשבוע', type: 'number', secondary: true },
+          { key: 'weeklyPosts', label: 'Posts לשבוע', type: 'number', secondary: true },
+          { key: 'weeklyTiktoks', label: 'TikTok לשבוע', type: 'number', secondary: true },
+          { key: 'notes', label: 'הערות', type: 'textarea', secondary: true },
+        ]}
+        initialValues={{
+          priority: promotionPlan?.priority ?? 'medium',
+          weeklyReels: promotionPlan?.weeklyReels !== undefined ? String(promotionPlan.weeklyReels) : '',
+          weeklyStories: promotionPlan?.weeklyStories !== undefined ? String(promotionPlan.weeklyStories) : '',
+          weeklyCarousels: promotionPlan?.weeklyCarousels !== undefined ? String(promotionPlan.weeklyCarousels) : '',
+          weeklyPosts: promotionPlan?.weeklyPosts !== undefined ? String(promotionPlan.weeklyPosts) : '',
+          weeklyTiktoks: promotionPlan?.weeklyTiktoks !== undefined ? String(promotionPlan.weeklyTiktoks) : '',
+          notes: promotionPlan?.notes ?? '',
+        }}
+        onClose={() => setPromotionOpen(false)}
+        onSave={handleSavePromotion}
       />
     </div>
   )

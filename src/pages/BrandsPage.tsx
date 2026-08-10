@@ -3,6 +3,16 @@ import { Link } from 'react-router-dom'
 import { useStore } from '../data/StoreContext'
 import { Card, EmptyLine } from '../components/ui'
 import QuickAddPopover, { QuickAddField } from '../components/hub/QuickAddPopover'
+import { TargetIcon, CalendarIcon, BulbIcon, CameraIcon, CompassIcon, WrenchIcon } from '../components/hub/hubIcons'
+
+const CONTENT_TOOLS = [
+  { to: '/work/today', label: 'התוכן להיום', icon: TargetIcon },
+  { to: '/work/content-calendar', label: 'לוח תוכן', icon: CalendarIcon },
+  { to: '/work/ideas', label: 'מאגר רעיונות', icon: BulbIcon },
+  { to: '/work/scripts', label: 'תסריטים', icon: CameraIcon },
+  { to: '/work/content-analytics', label: 'אנליטיקה', icon: CompassIcon },
+  { to: '/work/creative-tools', label: 'כלי יצירה', icon: WrenchIcon },
+]
 
 const ADD_BRAND_FIELDS: QuickAddField[] = [
   { key: 'name', label: 'שם המותג', type: 'text', required: true },
@@ -56,6 +66,22 @@ export default function BrandsPage() {
             ייבוא חבילת מותג
           </Link>
         </div>
+      </div>
+
+      <div className="flex flex-wrap gap-2">
+        {CONTENT_TOOLS.map((tool) => {
+          const Icon = tool.icon
+          return (
+            <Link
+              key={tool.to}
+              to={tool.to}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-medium border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-900 text-stone-600 dark:text-stone-300 hover:border-amber-300 dark:hover:border-amber-800 transition-colors"
+            >
+              <Icon className="w-3.5 h-3.5" />
+              {tool.label}
+            </Link>
+          )
+        })}
       </div>
 
       {brands.length === 0 ? (

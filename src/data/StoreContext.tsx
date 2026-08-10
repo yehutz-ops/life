@@ -4,6 +4,7 @@ import { Brand, BrandProduct, BrandCampaign, BrandContentItem, BrandPendingActiv
 import { Influencer, InfluencerProduct, InfluencerContent, InfluencerSale } from './influencerTypes'
 import { Campaign, CampaignCreative } from './campaignTypes'
 import { Shipment, ShipmentQuote, ShipmentDocument, ShipmentTimelineEvent, Forwarder } from './shipmentTypes'
+import { MediaAsset, IdeaBankItem, ContentPiece, VideoScript, ContentRule, PromotionPlan } from './contentStudioTypes'
 import { repository } from './db/repository'
 import { seedIfEmpty } from './db/seed'
 import { isIndexedDBAvailable } from './db/database'
@@ -36,6 +37,12 @@ interface StoreValue {
   forwarders: Forwarder[]
   brandContacts: BrandContact[]
   brandDocuments: BrandDocument[]
+  contentMediaAssets: MediaAsset[]
+  ideaBankItems: IdeaBankItem[]
+  contentPieces: ContentPiece[]
+  videoScripts: VideoScript[]
+  contentRules: ContentRule[]
+  promotionPlans: PromotionPlan[]
   loading: boolean
   storageAvailable: boolean
   addItem: (data: Omit<Item, 'id' | 'createdAt' | 'updatedAt'>) => Promise<Item>
@@ -61,6 +68,21 @@ interface StoreValue {
   addBrandDocument: (data: Omit<BrandDocument, 'id' | 'createdAt' | 'updatedAt'>) => Promise<BrandDocument>
   updateBrandDocument: (id: string, patch: Partial<BrandDocument>) => Promise<void>
   deleteBrandDocument: (id: string) => Promise<void>
+  addContentMediaAsset: (data: Omit<MediaAsset, 'id' | 'createdAt' | 'updatedAt'>) => Promise<MediaAsset>
+  updateContentMediaAsset: (id: string, patch: Partial<MediaAsset>) => Promise<void>
+  deleteContentMediaAsset: (id: string) => Promise<void>
+  addIdeaBankItem: (data: Omit<IdeaBankItem, 'id' | 'createdAt' | 'updatedAt'>) => Promise<IdeaBankItem>
+  updateIdeaBankItem: (id: string, patch: Partial<IdeaBankItem>) => Promise<void>
+  deleteIdeaBankItem: (id: string) => Promise<void>
+  addContentPiece: (data: Omit<ContentPiece, 'id' | 'createdAt' | 'updatedAt'>) => Promise<ContentPiece>
+  updateContentPiece: (id: string, patch: Partial<ContentPiece>) => Promise<void>
+  deleteContentPiece: (id: string) => Promise<void>
+  addVideoScript: (data: Omit<VideoScript, 'id' | 'createdAt' | 'updatedAt'>) => Promise<VideoScript>
+  updateVideoScript: (id: string, patch: Partial<VideoScript>) => Promise<void>
+  deleteVideoScript: (id: string) => Promise<void>
+  addContentRule: (data: Omit<ContentRule, 'id' | 'createdAt' | 'updatedAt'>) => Promise<ContentRule>
+  deleteContentRule: (id: string) => Promise<void>
+  addOrUpdatePromotionPlan: (brandId: string, patch: Partial<Omit<PromotionPlan, 'id' | 'brandId' | 'createdAt' | 'updatedAt'>>) => Promise<PromotionPlan>
   addShipment: (data: Omit<Shipment, 'id' | 'createdAt' | 'updatedAt'>) => Promise<Shipment>
   updateShipment: (id: string, patch: Partial<Shipment>) => Promise<void>
   deleteShipment: (id: string) => Promise<void>
@@ -122,12 +144,18 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [forwarders, setForwarders] = useState<Forwarder[]>([])
   const [brandContacts, setBrandContacts] = useState<BrandContact[]>([])
   const [brandDocuments, setBrandDocuments] = useState<BrandDocument[]>([])
+  const [contentMediaAssets, setContentMediaAssets] = useState<MediaAsset[]>([])
+  const [ideaBankItems, setIdeaBankItems] = useState<IdeaBankItem[]>([])
+  const [contentPieces, setContentPieces] = useState<ContentPiece[]>([])
+  const [videoScripts, setVideoScripts] = useState<VideoScript[]>([])
+  const [contentRules, setContentRules] = useState<ContentRule[]>([])
+  const [promotionPlans, setPromotionPlans] = useState<PromotionPlan[]>([])
   const [loading, setLoading] = useState(true)
   const storageAvailable = isIndexedDBAvailable()
   const notify = useNotify()
 
   async function loadAll() {
-    const [i, p, ib, br, bp, bc, bci, bpa, bma, inf, infp, infc, infs, camp, campc, sh, shq, shd, shte, fw, bcn, bdc] = await Promise.all([
+    const [i, p, ib, br, bp, bc, bci, bpa, bma, inf, infp, infc, infs, camp, campc, sh, shq, shd, shte, fw, bcn, bdc, cma, ibi, cp, vs, cr, pp] = await Promise.all([
       repository.getAllItems(),
       repository.getAllProjects(),
       repository.getAllInboxEntries(),
@@ -150,6 +178,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       repository.getAllForwarders(),
       repository.getAllBrandContacts(),
       repository.getAllBrandDocuments(),
+      repository.getAllContentMediaAssets(),
+      repository.getAllIdeaBankItems(),
+      repository.getAllContentPieces(),
+      repository.getAllVideoScripts(),
+      repository.getAllContentRules(),
+      repository.getAllPromotionPlans(),
     ])
     setItems(i)
     setProjects(p)
@@ -173,6 +207,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setForwarders(fw)
     setBrandContacts(bcn)
     setBrandDocuments(bdc)
+    setContentMediaAssets(cma)
+    setIdeaBankItems(ibi)
+    setContentPieces(cp)
+    setVideoScripts(vs)
+    setContentRules(cr)
+    setPromotionPlans(pp)
   }
 
   useEffect(() => {
@@ -439,6 +479,180 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setBrandDocuments((prev) => prev.filter((d) => d.id !== id))
     } catch (err: any) {
       notify(`לא הצלחתי למחוק את המסמך: ${err.message ?? err}`, 'error')
+    }
+  }
+
+  async function addContentMediaAsset(data: Omit<MediaAsset, 'id' | 'createdAt' | 'updatedAt'>) {
+    const now = nowISO()
+    const asset: MediaAsset = { ...data, id: newId('media'), createdAt: now, updatedAt: now }
+    try {
+      await repository.putContentMediaAsset(asset)
+      setContentMediaAssets((prev) => [asset, ...prev])
+      return asset
+    } catch (err: any) {
+      notify(`לא הצלחתי לשמור את החומר: ${err.message ?? err}`, 'error')
+      throw err
+    }
+  }
+
+  async function updateContentMediaAsset(id: string, patch: Partial<MediaAsset>) {
+    const current = contentMediaAssets.find((m) => m.id === id)
+    if (!current) return
+    const next: MediaAsset = { ...current, ...patch, updatedAt: nowISO() }
+    try {
+      await repository.putContentMediaAsset(next)
+      setContentMediaAssets((prev) => prev.map((m) => (m.id === id ? next : m)))
+    } catch (err: any) {
+      notify(`לא הצלחתי לשמור את השינוי: ${err.message ?? err}`, 'error')
+    }
+  }
+
+  async function deleteContentMediaAsset(id: string) {
+    try {
+      await repository.deleteContentMediaAsset(id)
+      setContentMediaAssets((prev) => prev.filter((m) => m.id !== id))
+    } catch (err: any) {
+      notify(`לא הצלחתי למחוק את החומר: ${err.message ?? err}`, 'error')
+    }
+  }
+
+  async function addIdeaBankItem(data: Omit<IdeaBankItem, 'id' | 'createdAt' | 'updatedAt'>) {
+    const now = nowISO()
+    const item: IdeaBankItem = { ...data, id: newId('idea'), createdAt: now, updatedAt: now }
+    try {
+      await repository.putIdeaBankItem(item)
+      setIdeaBankItems((prev) => [item, ...prev])
+      return item
+    } catch (err: any) {
+      notify(`לא הצלחתי לשמור את הרעיון: ${err.message ?? err}`, 'error')
+      throw err
+    }
+  }
+
+  async function updateIdeaBankItem(id: string, patch: Partial<IdeaBankItem>) {
+    const current = ideaBankItems.find((i) => i.id === id)
+    if (!current) return
+    const next: IdeaBankItem = { ...current, ...patch, updatedAt: nowISO() }
+    try {
+      await repository.putIdeaBankItem(next)
+      setIdeaBankItems((prev) => prev.map((i) => (i.id === id ? next : i)))
+    } catch (err: any) {
+      notify(`לא הצלחתי לשמור את השינוי: ${err.message ?? err}`, 'error')
+    }
+  }
+
+  async function deleteIdeaBankItem(id: string) {
+    try {
+      await repository.deleteIdeaBankItem(id)
+      setIdeaBankItems((prev) => prev.filter((i) => i.id !== id))
+    } catch (err: any) {
+      notify(`לא הצלחתי למחוק את הרעיון: ${err.message ?? err}`, 'error')
+    }
+  }
+
+  async function addContentPiece(data: Omit<ContentPiece, 'id' | 'createdAt' | 'updatedAt'>) {
+    const now = nowISO()
+    const piece: ContentPiece = { ...data, id: newId('content'), createdAt: now, updatedAt: now }
+    try {
+      await repository.putContentPiece(piece)
+      setContentPieces((prev) => [piece, ...prev])
+      return piece
+    } catch (err: any) {
+      notify(`לא הצלחתי לשמור את התוכן: ${err.message ?? err}`, 'error')
+      throw err
+    }
+  }
+
+  async function updateContentPiece(id: string, patch: Partial<ContentPiece>) {
+    const current = contentPieces.find((c) => c.id === id)
+    if (!current) return
+    const next: ContentPiece = { ...current, ...patch, updatedAt: nowISO() }
+    try {
+      await repository.putContentPiece(next)
+      setContentPieces((prev) => prev.map((c) => (c.id === id ? next : c)))
+    } catch (err: any) {
+      notify(`לא הצלחתי לשמור את השינוי: ${err.message ?? err}`, 'error')
+    }
+  }
+
+  async function deleteContentPiece(id: string) {
+    try {
+      await repository.deleteContentPiece(id)
+      setContentPieces((prev) => prev.filter((c) => c.id !== id))
+    } catch (err: any) {
+      notify(`לא הצלחתי למחוק את התוכן: ${err.message ?? err}`, 'error')
+    }
+  }
+
+  async function addVideoScript(data: Omit<VideoScript, 'id' | 'createdAt' | 'updatedAt'>) {
+    const now = nowISO()
+    const script: VideoScript = { ...data, id: newId('script'), createdAt: now, updatedAt: now }
+    try {
+      await repository.putVideoScript(script)
+      setVideoScripts((prev) => [script, ...prev])
+      return script
+    } catch (err: any) {
+      notify(`לא הצלחתי לשמור את התסריט: ${err.message ?? err}`, 'error')
+      throw err
+    }
+  }
+
+  async function updateVideoScript(id: string, patch: Partial<VideoScript>) {
+    const current = videoScripts.find((s) => s.id === id)
+    if (!current) return
+    const next: VideoScript = { ...current, ...patch, updatedAt: nowISO() }
+    try {
+      await repository.putVideoScript(next)
+      setVideoScripts((prev) => prev.map((s) => (s.id === id ? next : s)))
+    } catch (err: any) {
+      notify(`לא הצלחתי לשמור את השינוי: ${err.message ?? err}`, 'error')
+    }
+  }
+
+  async function deleteVideoScript(id: string) {
+    try {
+      await repository.deleteVideoScript(id)
+      setVideoScripts((prev) => prev.filter((s) => s.id !== id))
+    } catch (err: any) {
+      notify(`לא הצלחתי למחוק את התסריט: ${err.message ?? err}`, 'error')
+    }
+  }
+
+  async function addContentRule(data: Omit<ContentRule, 'id' | 'createdAt' | 'updatedAt'>) {
+    const now = nowISO()
+    const rule: ContentRule = { ...data, id: newId('rule'), createdAt: now, updatedAt: now }
+    try {
+      await repository.putContentRule(rule)
+      setContentRules((prev) => [rule, ...prev])
+      return rule
+    } catch (err: any) {
+      notify(`לא הצלחתי לשמור את הכלל: ${err.message ?? err}`, 'error')
+      throw err
+    }
+  }
+
+  async function deleteContentRule(id: string) {
+    try {
+      await repository.deleteContentRule(id)
+      setContentRules((prev) => prev.filter((r) => r.id !== id))
+    } catch (err: any) {
+      notify(`לא הצלחתי למחוק את הכלל: ${err.message ?? err}`, 'error')
+    }
+  }
+
+  async function addOrUpdatePromotionPlan(brandId: string, patch: Partial<Omit<PromotionPlan, 'id' | 'brandId' | 'createdAt' | 'updatedAt'>>) {
+    const current = promotionPlans.find((p) => p.brandId === brandId)
+    const now = nowISO()
+    const next: PromotionPlan = current
+      ? { ...current, ...patch, updatedAt: now }
+      : { id: newId('promoplan'), brandId, priority: 'medium', ...patch, createdAt: now, updatedAt: now }
+    try {
+      await repository.putPromotionPlan(next)
+      setPromotionPlans((prev) => (current ? prev.map((p) => (p.id === next.id ? next : p)) : [next, ...prev]))
+      return next
+    } catch (err: any) {
+      notify(`לא הצלחתי לשמור את תוכנית הקידום: ${err.message ?? err}`, 'error')
+      throw err
     }
   }
 
@@ -793,6 +1007,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setForwarders([])
       setBrandContacts([])
       setBrandDocuments([])
+      setContentMediaAssets([])
+      setIdeaBankItems([])
+      setContentPieces([])
+      setVideoScripts([])
+      setContentRules([])
+      setPromotionPlans([])
       notify('כל המידע נמחק. אפשר להתחיל מחדש.', 'success')
     } catch (err: any) {
       notify(`המחיקה נכשלה: ${err.message ?? err}`, 'error')
@@ -823,6 +1043,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       forwarders,
       brandContacts,
       brandDocuments,
+      contentMediaAssets,
+      ideaBankItems,
+      contentPieces,
+      videoScripts,
+      contentRules,
+      promotionPlans,
       loading,
       storageAvailable,
       addItem,
@@ -848,6 +1074,21 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       addBrandDocument,
       updateBrandDocument,
       deleteBrandDocument,
+      addContentMediaAsset,
+      updateContentMediaAsset,
+      deleteContentMediaAsset,
+      addIdeaBankItem,
+      updateIdeaBankItem,
+      deleteIdeaBankItem,
+      addContentPiece,
+      updateContentPiece,
+      deleteContentPiece,
+      addVideoScript,
+      updateVideoScript,
+      deleteVideoScript,
+      addContentRule,
+      deleteContentRule,
+      addOrUpdatePromotionPlan,
       addShipment,
       updateShipment,
       deleteShipment,
@@ -902,6 +1143,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       forwarders,
       brandContacts,
       brandDocuments,
+      contentMediaAssets,
+      ideaBankItems,
+      contentPieces,
+      videoScripts,
+      contentRules,
+      promotionPlans,
       loading,
     ],
   )
