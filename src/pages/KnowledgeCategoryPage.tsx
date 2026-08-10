@@ -5,16 +5,19 @@ import { useConfirm } from '../data/ConfirmContext'
 import { getKnowledgeCategory, KnowledgeCategoryId } from '../data/personalKnowledgeCategories'
 import ChecklistPanel from '../components/hub/ChecklistPanel'
 import QuickNoteModal from '../components/hub/QuickNoteModal'
+import QuickAddPopover from '../components/hub/QuickAddPopover'
 import { ItemStatus } from '../data/types'
 
 const isActive = (status: ItemStatus) => status !== 'done' && status !== 'cancelled'
 const VALID_IDS: KnowledgeCategoryId[] = ['library', 'quotes', 'articles', 'ideas']
+const VALID_STATUSES: ItemStatus[] = ['open', 'in_progress', 'done']
 
 export default function KnowledgeCategoryPage() {
   const { categoryId } = useParams<{ categoryId: string }>()
   const { items, addItem, toggleDone, updateItem, deleteItem } = useStore()
   const confirm = useConfirm()
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [quickAddOpen, setQuickAddOpen] = useState(false)
 
   if (!categoryId || !VALID_IDS.includes(categoryId as KnowledgeCategoryId)) return <Navigate to="/personal" replace />
   const category = getKnowledgeCategory(categoryId as KnowledgeCategoryId)
@@ -40,8 +43,30 @@ export default function KnowledgeCategoryPage() {
     if (ok) await deleteItem(id)
   }
 
-  function handleAdd(title: string) {
-    addItem({ title, kind: 'task', domain: 'personal', listType: category.listType, destination: category.destination, priority: 'low', status: 'open' })
+  function handleQuickAddSave(values: Record<string, string>) {
+    const title = values.title?.trim()
+    if (!title) return
+    const status = VALID_STATUSES.includes(values.status as ItemStatus) ? (values.status as ItemStatus) : 'open'
+    const rating = values.rating ? Number(values.rating) : undefined
+    addItem({
+      title,
+      kind: 'task',
+      domain: 'personal',
+      listType: category.listType,
+      destination: category.destination,
+      priority: 'low',
+      status,
+      itemSubtype: values.itemSubtype || undefined,
+      source: values.source || undefined,
+      topic: values.topic || undefined,
+      author: values.author || undefined,
+      rating: rating !== undefined && !Number.isNaN(rating) ? rating : undefined,
+      stage: values.stage || undefined,
+      summary: values.summary || undefined,
+      convertTo: values.convertTo || undefined,
+      notes: values.notes || undefined,
+    })
+    setQuickAddOpen(false)
   }
 
   return (
@@ -70,7 +95,7 @@ export default function KnowledgeCategoryPage() {
         onToggle={toggleDone}
         onEdit={setEditingId}
         onDelete={handleDelete}
-        onAdd={handleAdd}
+        onAddClick={() => setQuickAddOpen(true)}
         emptyText={category.emptyText}
         addPlaceholder={category.addPlaceholder}
       />
@@ -84,6 +109,8 @@ export default function KnowledgeCategoryPage() {
         onSave={(id, data) => updateItem(id, data)}
         onDelete={handleDelete}
       />
+
+      <QuickAddPopover open={quickAddOpen} title={category.quickAddTitle} fields={category.quickAddFields} onClose={() => setQuickAddOpen(false)} onSave={handleQuickAddSave} />
     </div>
   )
 }

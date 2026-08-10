@@ -15,13 +15,14 @@ export default function ChecklistPanel({
   onDelete,
   className = '',
   variant = 'default',
+  onAddClick,
 }: {
   title: string
   items: Item[]
   onToggle: (id: string) => void
-  onAdd: (title: string) => void
+  onAdd?: (title: string) => void
   emptyText: string
-  addPlaceholder: string
+  addPlaceholder?: string
   renderMeta?: (item: Item) => ReactNode
   onEdit?: (id: string) => void
   onDelete?: (id: string) => void
@@ -29,12 +30,14 @@ export default function ChecklistPanel({
   // 'notepad' — עיצוב פנקס/מחברת קניות (דף בהיר, שורות אופקיות, רמז ספירלה) עבור מקרים ספציפיים
   // כמו רשימת קניות; 'default' (ברירת מחדל) נשאר הכרטיס הרגיל של שאר השימושים ברכיב.
   variant?: 'default' | 'notepad'
+  // כאשר מסופק — לחיצה על "+" פותחת טופס חיצוני (למשל QuickAddPopover) במקום שדה טקסט פשוט מוטמע.
+  onAddClick?: () => void
 }) {
   const [draft, setDraft] = useState('')
 
   function submit() {
     const value = draft.trim()
-    if (!value) return
+    if (!value || !onAdd) return
     onAdd(value)
     setDraft('')
   }
@@ -109,25 +112,37 @@ export default function ChecklistPanel({
       )}
 
       <div className="flex items-center gap-2 pt-3 border-t border-stone-50 dark:border-stone-800 mt-auto">
-        <input
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') {
-              e.preventDefault()
-              submit()
-            }
-          }}
-          placeholder={addPlaceholder}
-          className="flex-1 rounded-xl border border-stone-200 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100 px-3 py-2 text-sm placeholder:text-stone-400"
-        />
-        <button
-          onClick={submit}
-          aria-label="הוספה"
-          className="w-9 h-9 shrink-0 rounded-xl bg-amber-800 hover:bg-amber-900 text-white flex items-center justify-center text-lg"
-        >
-          +
-        </button>
+        {onAddClick ? (
+          <button
+            onClick={onAddClick}
+            className="flex-1 flex items-center gap-2 rounded-xl border border-dashed border-stone-200 dark:border-stone-700 px-3 py-2 text-sm text-stone-400 dark:text-stone-500 hover:border-stone-300 dark:hover:border-stone-600 hover:text-stone-600 dark:hover:text-stone-300 transition-colors"
+          >
+            <span className="w-6 h-6 rounded-full bg-amber-800 text-white flex items-center justify-center text-sm shrink-0">+</span>
+            {addPlaceholder}
+          </button>
+        ) : (
+          <>
+            <input
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault()
+                  submit()
+                }
+              }}
+              placeholder={addPlaceholder}
+              className="flex-1 rounded-xl border border-stone-200 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100 px-3 py-2 text-sm placeholder:text-stone-400"
+            />
+            <button
+              onClick={submit}
+              aria-label="הוספה"
+              className="w-9 h-9 shrink-0 rounded-xl bg-amber-800 hover:bg-amber-900 text-white flex items-center justify-center text-lg"
+            >
+              +
+            </button>
+          </>
+        )}
       </div>
     </div>
   )

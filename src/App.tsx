@@ -9,6 +9,7 @@ import WorkPage from './pages/WorkPage'
 import WorkCategoryPage from './pages/WorkCategoryPage'
 import HouseholdPage from './pages/HouseholdPage'
 import PersonalPage from './pages/PersonalPage'
+import FinancePage from './pages/FinancePage'
 import KnowledgeCategoryPage from './pages/KnowledgeCategoryPage'
 import InboxPage from './pages/InboxPage'
 import SearchPage from './pages/SearchPage'
@@ -53,7 +54,7 @@ export default function App() {
                         <Route path="personal/:categoryId" element={<KnowledgeCategoryPage />} />
                         <Route path="household" element={<HouseholdPage />} />
                         <Route path="health" element={<DomainPage domainId="health" />} />
-                        <Route path="finance" element={<DomainPage domainId="finance" />} />
+                        <Route path="finance" element={<FinancePage />} />
                         <Route path="personal-development" element={<DomainPage domainId="personalDevelopment" />} />
                         <Route path="*" element={<Navigate to="/" replace />} />
                       </Route>

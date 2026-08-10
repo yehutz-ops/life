@@ -212,6 +212,16 @@ export function HeartIcon(props: IconProps) {
   )
 }
 
+export function WalletIcon(props: IconProps) {
+  return (
+    <Base {...props}>
+      <path d="M4 7.5A1.5 1.5 0 0 1 5.5 6h11A1.5 1.5 0 0 1 18 7.5V9H5.5A1.5 1.5 0 0 1 4 7.5Z" />
+      <path d="M4 7.5v9A1.5 1.5 0 0 0 5.5 18h13a1.5 1.5 0 0 0 1.5-1.5v-6A1.5 1.5 0 0 0 18.5 9H5.5" />
+      <circle cx="16" cy="13" r="1.1" fill="currentColor" stroke="none" />
+    </Base>
+  )
+}
+
 export const workCategoryIcons: Record<WorkCategoryId | 'brands', (props: IconProps) => JSX.Element> = {
   brands: TagIcon,
   content: CameraIcon,

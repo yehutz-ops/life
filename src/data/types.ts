@@ -43,6 +43,16 @@ export interface Item {
   notes?: string
   amount?: number
   currency?: string
+  // שדות "ידע ותרבות" (הספרייה שלי / ציטוטים / מאמרים / רעיונות) — Additive, אופציונליים,
+  // בשימוש רק כשרלוונטי להקשר. לא נוגעים בשום Item קיים אחר.
+  itemSubtype?: string // סוג מקור/מדיה: book | article | movie | series | lecture | other
+  source?: string // שם המקור (ציטוטים)
+  topic?: string // הקשר/נושא (ציטוטים, רעיונות)
+  author?: string // מחבר/במאי (ציטוטים, הספרייה שלי)
+  rating?: number // דירוג אישי (הספרייה שלי)
+  stage?: string // שלב עבודה כללי, למשל למאמרים: idea | draft | editing | done
+  summary?: string // תקציר/רעיון קצר (מאמרים)
+  convertTo?: string // 'article' | 'project' — סימון עתידי בלבד (רעיונות)
   createdAt: string
   updatedAt: string
   completedAt?: string
