@@ -1,8 +1,9 @@
 import { createContext, useContext, useEffect, useMemo, useState, ReactNode } from 'react'
 import { Item, Project, InboxEntry } from './types'
-import { Brand, BrandProduct, BrandCampaign, BrandContentItem, BrandPendingActivity, BrandMediaAsset } from './brandTypes'
+import { Brand, BrandProduct, BrandCampaign, BrandContentItem, BrandPendingActivity, BrandMediaAsset, BrandContact, BrandDocument } from './brandTypes'
 import { Influencer, InfluencerProduct, InfluencerContent, InfluencerSale } from './influencerTypes'
 import { Campaign, CampaignCreative } from './campaignTypes'
+import { Shipment, ShipmentQuote, ShipmentDocument, ShipmentTimelineEvent, Forwarder } from './shipmentTypes'
 import { repository } from './db/repository'
 import { seedIfEmpty } from './db/seed'
 import { isIndexedDBAvailable } from './db/database'
@@ -28,6 +29,13 @@ interface StoreValue {
   influencerSales: InfluencerSale[]
   campaigns: Campaign[]
   campaignCreatives: CampaignCreative[]
+  shipments: Shipment[]
+  shipmentQuotes: ShipmentQuote[]
+  shipmentDocuments: ShipmentDocument[]
+  shipmentTimelineEvents: ShipmentTimelineEvent[]
+  forwarders: Forwarder[]
+  brandContacts: BrandContact[]
+  brandDocuments: BrandDocument[]
   loading: boolean
   storageAvailable: boolean
   addItem: (data: Omit<Item, 'id' | 'createdAt' | 'updatedAt'>) => Promise<Item>
@@ -41,6 +49,30 @@ interface StoreValue {
   addInboxEntry: (text: string, source: 'typed' | 'spoken') => Promise<void>
   sortInboxEntry: (entryId: string, data: Omit<Item, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>
   deleteInboxEntry: (id: string) => Promise<void>
+  addBrand: (data: Omit<Brand, 'id' | 'createdAt' | 'updatedAt' | 'lastImportedAt'>) => Promise<Brand>
+  updateBrand: (id: string, patch: Partial<Brand>) => Promise<void>
+  deleteBrand: (id: string) => Promise<void>
+  addBrandProduct: (data: Omit<BrandProduct, 'id' | 'createdAt' | 'updatedAt' | 'lastImportedAt'>) => Promise<BrandProduct>
+  updateBrandProduct: (id: string, patch: Partial<BrandProduct>) => Promise<void>
+  deleteBrandProduct: (id: string) => Promise<void>
+  addBrandContact: (data: Omit<BrandContact, 'id' | 'createdAt' | 'updatedAt'>) => Promise<BrandContact>
+  updateBrandContact: (id: string, patch: Partial<BrandContact>) => Promise<void>
+  deleteBrandContact: (id: string) => Promise<void>
+  addBrandDocument: (data: Omit<BrandDocument, 'id' | 'createdAt' | 'updatedAt'>) => Promise<BrandDocument>
+  updateBrandDocument: (id: string, patch: Partial<BrandDocument>) => Promise<void>
+  deleteBrandDocument: (id: string) => Promise<void>
+  addShipment: (data: Omit<Shipment, 'id' | 'createdAt' | 'updatedAt'>) => Promise<Shipment>
+  updateShipment: (id: string, patch: Partial<Shipment>) => Promise<void>
+  deleteShipment: (id: string) => Promise<void>
+  addShipmentQuote: (data: Omit<ShipmentQuote, 'id' | 'createdAt' | 'updatedAt'>) => Promise<ShipmentQuote>
+  updateShipmentQuote: (id: string, patch: Partial<ShipmentQuote>) => Promise<void>
+  deleteShipmentQuote: (id: string) => Promise<void>
+  addShipmentDocument: (data: Omit<ShipmentDocument, 'id' | 'createdAt' | 'updatedAt'>) => Promise<ShipmentDocument>
+  deleteShipmentDocument: (id: string) => Promise<void>
+  addShipmentTimelineEvent: (data: Omit<ShipmentTimelineEvent, 'id' | 'createdAt'>) => Promise<ShipmentTimelineEvent>
+  addForwarder: (data: Omit<Forwarder, 'id' | 'createdAt' | 'updatedAt'>) => Promise<Forwarder>
+  updateForwarder: (id: string, patch: Partial<Forwarder>) => Promise<void>
+  deleteForwarder: (id: string) => Promise<void>
   addInfluencer: (data: Omit<Influencer, 'id' | 'createdAt' | 'updatedAt'>) => Promise<Influencer>
   updateInfluencer: (id: string, patch: Partial<Influencer>) => Promise<void>
   deleteInfluencer: (id: string) => Promise<void>
@@ -83,12 +115,19 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [influencerSales, setInfluencerSales] = useState<InfluencerSale[]>([])
   const [campaigns, setCampaigns] = useState<Campaign[]>([])
   const [campaignCreatives, setCampaignCreatives] = useState<CampaignCreative[]>([])
+  const [shipments, setShipments] = useState<Shipment[]>([])
+  const [shipmentQuotes, setShipmentQuotes] = useState<ShipmentQuote[]>([])
+  const [shipmentDocuments, setShipmentDocuments] = useState<ShipmentDocument[]>([])
+  const [shipmentTimelineEvents, setShipmentTimelineEvents] = useState<ShipmentTimelineEvent[]>([])
+  const [forwarders, setForwarders] = useState<Forwarder[]>([])
+  const [brandContacts, setBrandContacts] = useState<BrandContact[]>([])
+  const [brandDocuments, setBrandDocuments] = useState<BrandDocument[]>([])
   const [loading, setLoading] = useState(true)
   const storageAvailable = isIndexedDBAvailable()
   const notify = useNotify()
 
   async function loadAll() {
-    const [i, p, ib, br, bp, bc, bci, bpa, bma, inf, infp, infc, infs, camp, campc] = await Promise.all([
+    const [i, p, ib, br, bp, bc, bci, bpa, bma, inf, infp, infc, infs, camp, campc, sh, shq, shd, shte, fw, bcn, bdc] = await Promise.all([
       repository.getAllItems(),
       repository.getAllProjects(),
       repository.getAllInboxEntries(),
@@ -104,6 +143,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       repository.getAllInfluencerSales(),
       repository.getAllCampaigns(),
       repository.getAllCampaignCreatives(),
+      repository.getAllShipments(),
+      repository.getAllShipmentQuotes(),
+      repository.getAllShipmentDocuments(),
+      repository.getAllShipmentTimelineEvents(),
+      repository.getAllForwarders(),
+      repository.getAllBrandContacts(),
+      repository.getAllBrandDocuments(),
     ])
     setItems(i)
     setProjects(p)
@@ -120,6 +166,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setInfluencerSales(infs)
     setCampaigns(camp)
     setCampaignCreatives(campc)
+    setShipments(sh)
+    setShipmentQuotes(shq)
+    setShipmentDocuments(shd)
+    setShipmentTimelineEvents(shte)
+    setForwarders(fw)
+    setBrandContacts(bcn)
+    setBrandDocuments(bdc)
   }
 
   useEffect(() => {
@@ -250,6 +303,278 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setInboxEntries((prev) => prev.map((e) => (e.id === id ? next : e)))
     } catch (err: any) {
       notify(`לא הצלחתי למחוק את הפריט: ${err.message ?? err}`, 'error')
+    }
+  }
+
+  async function addBrand(data: Omit<Brand, 'id' | 'createdAt' | 'updatedAt' | 'lastImportedAt'>) {
+    const now = nowISO()
+    const brand: Brand = { ...data, id: newId('brand'), createdAt: now, updatedAt: now, lastImportedAt: now }
+    try {
+      await repository.putBrand(brand)
+      setBrands((prev) => [brand, ...prev])
+      return brand
+    } catch (err: any) {
+      notify(`לא הצלחתי לשמור את המותג: ${err.message ?? err}`, 'error')
+      throw err
+    }
+  }
+
+  async function updateBrand(id: string, patch: Partial<Brand>) {
+    const current = brands.find((b) => b.id === id)
+    if (!current) return
+    const next: Brand = { ...current, ...patch, updatedAt: nowISO() }
+    try {
+      await repository.putBrand(next)
+      setBrands((prev) => prev.map((b) => (b.id === id ? next : b)))
+    } catch (err: any) {
+      notify(`לא הצלחתי לשמור את השינוי: ${err.message ?? err}`, 'error')
+    }
+  }
+
+  async function deleteBrand(id: string) {
+    try {
+      await repository.deleteBrand(id)
+      setBrands((prev) => prev.filter((b) => b.id !== id))
+    } catch (err: any) {
+      notify(`לא הצלחתי למחוק את המותג: ${err.message ?? err}`, 'error')
+    }
+  }
+
+  async function addBrandProduct(data: Omit<BrandProduct, 'id' | 'createdAt' | 'updatedAt' | 'lastImportedAt'>) {
+    const now = nowISO()
+    const product: BrandProduct = { ...data, id: newId('brandprod'), createdAt: now, updatedAt: now, lastImportedAt: now }
+    try {
+      await repository.putBrandProduct(product)
+      setBrandProducts((prev) => [product, ...prev])
+      return product
+    } catch (err: any) {
+      notify(`לא הצלחתי לשמור את המוצר: ${err.message ?? err}`, 'error')
+      throw err
+    }
+  }
+
+  async function updateBrandProduct(id: string, patch: Partial<BrandProduct>) {
+    const current = brandProducts.find((p) => p.id === id)
+    if (!current) return
+    const next: BrandProduct = { ...current, ...patch, updatedAt: nowISO() }
+    try {
+      await repository.putBrandProduct(next)
+      setBrandProducts((prev) => prev.map((p) => (p.id === id ? next : p)))
+    } catch (err: any) {
+      notify(`לא הצלחתי לשמור את השינוי: ${err.message ?? err}`, 'error')
+    }
+  }
+
+  async function deleteBrandProduct(id: string) {
+    try {
+      await repository.deleteBrandProduct(id)
+      setBrandProducts((prev) => prev.filter((p) => p.id !== id))
+    } catch (err: any) {
+      notify(`לא הצלחתי למחוק את המוצר: ${err.message ?? err}`, 'error')
+    }
+  }
+
+  async function addBrandContact(data: Omit<BrandContact, 'id' | 'createdAt' | 'updatedAt'>) {
+    const now = nowISO()
+    const contact: BrandContact = { ...data, id: newId('contact'), createdAt: now, updatedAt: now }
+    try {
+      await repository.putBrandContact(contact)
+      setBrandContacts((prev) => [contact, ...prev])
+      return contact
+    } catch (err: any) {
+      notify(`לא הצלחתי לשמור את איש הקשר: ${err.message ?? err}`, 'error')
+      throw err
+    }
+  }
+
+  async function updateBrandContact(id: string, patch: Partial<BrandContact>) {
+    const current = brandContacts.find((c) => c.id === id)
+    if (!current) return
+    const next: BrandContact = { ...current, ...patch, updatedAt: nowISO() }
+    try {
+      await repository.putBrandContact(next)
+      setBrandContacts((prev) => prev.map((c) => (c.id === id ? next : c)))
+    } catch (err: any) {
+      notify(`לא הצלחתי לשמור את השינוי: ${err.message ?? err}`, 'error')
+    }
+  }
+
+  async function deleteBrandContact(id: string) {
+    try {
+      await repository.deleteBrandContact(id)
+      setBrandContacts((prev) => prev.filter((c) => c.id !== id))
+    } catch (err: any) {
+      notify(`לא הצלחתי למחוק את איש הקשר: ${err.message ?? err}`, 'error')
+    }
+  }
+
+  async function addBrandDocument(data: Omit<BrandDocument, 'id' | 'createdAt' | 'updatedAt'>) {
+    const now = nowISO()
+    const doc: BrandDocument = { ...data, id: newId('branddoc'), createdAt: now, updatedAt: now }
+    try {
+      await repository.putBrandDocument(doc)
+      setBrandDocuments((prev) => [doc, ...prev])
+      return doc
+    } catch (err: any) {
+      notify(`לא הצלחתי לשמור את המסמך: ${err.message ?? err}`, 'error')
+      throw err
+    }
+  }
+
+  async function updateBrandDocument(id: string, patch: Partial<BrandDocument>) {
+    const current = brandDocuments.find((d) => d.id === id)
+    if (!current) return
+    const next: BrandDocument = { ...current, ...patch, updatedAt: nowISO() }
+    try {
+      await repository.putBrandDocument(next)
+      setBrandDocuments((prev) => prev.map((d) => (d.id === id ? next : d)))
+    } catch (err: any) {
+      notify(`לא הצלחתי לשמור את השינוי: ${err.message ?? err}`, 'error')
+    }
+  }
+
+  async function deleteBrandDocument(id: string) {
+    try {
+      await repository.deleteBrandDocument(id)
+      setBrandDocuments((prev) => prev.filter((d) => d.id !== id))
+    } catch (err: any) {
+      notify(`לא הצלחתי למחוק את המסמך: ${err.message ?? err}`, 'error')
+    }
+  }
+
+  async function addShipment(data: Omit<Shipment, 'id' | 'createdAt' | 'updatedAt'>) {
+    const now = nowISO()
+    const shipment: Shipment = { ...data, id: newId('shipment'), createdAt: now, updatedAt: now }
+    try {
+      await repository.putShipment(shipment)
+      setShipments((prev) => [shipment, ...prev])
+      return shipment
+    } catch (err: any) {
+      notify(`לא הצלחתי לשמור את המשלוח: ${err.message ?? err}`, 'error')
+      throw err
+    }
+  }
+
+  async function updateShipment(id: string, patch: Partial<Shipment>) {
+    const current = shipments.find((s) => s.id === id)
+    if (!current) return
+    const next: Shipment = { ...current, ...patch, updatedAt: nowISO() }
+    try {
+      await repository.putShipment(next)
+      setShipments((prev) => prev.map((s) => (s.id === id ? next : s)))
+    } catch (err: any) {
+      notify(`לא הצלחתי לשמור את השינוי: ${err.message ?? err}`, 'error')
+    }
+  }
+
+  async function deleteShipment(id: string) {
+    try {
+      await repository.deleteShipment(id)
+      setShipments((prev) => prev.filter((s) => s.id !== id))
+    } catch (err: any) {
+      notify(`לא הצלחתי למחוק את המשלוח: ${err.message ?? err}`, 'error')
+    }
+  }
+
+  async function addShipmentQuote(data: Omit<ShipmentQuote, 'id' | 'createdAt' | 'updatedAt'>) {
+    const now = nowISO()
+    const quote: ShipmentQuote = { ...data, id: newId('quote'), createdAt: now, updatedAt: now }
+    try {
+      await repository.putShipmentQuote(quote)
+      setShipmentQuotes((prev) => [quote, ...prev])
+      return quote
+    } catch (err: any) {
+      notify(`לא הצלחתי לשמור את הצעת המחיר: ${err.message ?? err}`, 'error')
+      throw err
+    }
+  }
+
+  async function updateShipmentQuote(id: string, patch: Partial<ShipmentQuote>) {
+    const current = shipmentQuotes.find((q) => q.id === id)
+    if (!current) return
+    const next: ShipmentQuote = { ...current, ...patch, updatedAt: nowISO() }
+    try {
+      await repository.putShipmentQuote(next)
+      setShipmentQuotes((prev) => prev.map((q) => (q.id === id ? next : q)))
+    } catch (err: any) {
+      notify(`לא הצלחתי לשמור את השינוי: ${err.message ?? err}`, 'error')
+    }
+  }
+
+  async function deleteShipmentQuote(id: string) {
+    try {
+      await repository.deleteShipmentQuote(id)
+      setShipmentQuotes((prev) => prev.filter((q) => q.id !== id))
+    } catch (err: any) {
+      notify(`לא הצלחתי למחוק את הצעת המחיר: ${err.message ?? err}`, 'error')
+    }
+  }
+
+  async function addShipmentDocument(data: Omit<ShipmentDocument, 'id' | 'createdAt' | 'updatedAt'>) {
+    const now = nowISO()
+    const doc: ShipmentDocument = { ...data, id: newId('shipdoc'), createdAt: now, updatedAt: now }
+    try {
+      await repository.putShipmentDocument(doc)
+      setShipmentDocuments((prev) => [doc, ...prev])
+      return doc
+    } catch (err: any) {
+      notify(`לא הצלחתי לשמור את המסמך: ${err.message ?? err}`, 'error')
+      throw err
+    }
+  }
+
+  async function deleteShipmentDocument(id: string) {
+    try {
+      await repository.deleteShipmentDocument(id)
+      setShipmentDocuments((prev) => prev.filter((d) => d.id !== id))
+    } catch (err: any) {
+      notify(`לא הצלחתי למחוק את המסמך: ${err.message ?? err}`, 'error')
+    }
+  }
+
+  async function addShipmentTimelineEvent(data: Omit<ShipmentTimelineEvent, 'id' | 'createdAt'>) {
+    const event: ShipmentTimelineEvent = { ...data, id: newId('timeline'), createdAt: nowISO() }
+    try {
+      await repository.putShipmentTimelineEvent(event)
+      setShipmentTimelineEvents((prev) => [event, ...prev])
+      return event
+    } catch (err: any) {
+      notify(`לא הצלחתי לשמור את האירוע: ${err.message ?? err}`, 'error')
+      throw err
+    }
+  }
+
+  async function addForwarder(data: Omit<Forwarder, 'id' | 'createdAt' | 'updatedAt'>) {
+    const now = nowISO()
+    const forwarder: Forwarder = { ...data, id: newId('forwarder'), createdAt: now, updatedAt: now }
+    try {
+      await repository.putForwarder(forwarder)
+      setForwarders((prev) => [forwarder, ...prev])
+      return forwarder
+    } catch (err: any) {
+      notify(`לא הצלחתי לשמור את חברת השילוח: ${err.message ?? err}`, 'error')
+      throw err
+    }
+  }
+
+  async function updateForwarder(id: string, patch: Partial<Forwarder>) {
+    const current = forwarders.find((f) => f.id === id)
+    if (!current) return
+    const next: Forwarder = { ...current, ...patch, updatedAt: nowISO() }
+    try {
+      await repository.putForwarder(next)
+      setForwarders((prev) => prev.map((f) => (f.id === id ? next : f)))
+    } catch (err: any) {
+      notify(`לא הצלחתי לשמור את השינוי: ${err.message ?? err}`, 'error')
+    }
+  }
+
+  async function deleteForwarder(id: string) {
+    try {
+      await repository.deleteForwarder(id)
+      setForwarders((prev) => prev.filter((f) => f.id !== id))
+    } catch (err: any) {
+      notify(`לא הצלחתי למחוק את חברת השילוח: ${err.message ?? err}`, 'error')
     }
   }
 
@@ -461,6 +786,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setInfluencerSales([])
       setCampaigns([])
       setCampaignCreatives([])
+      setShipments([])
+      setShipmentQuotes([])
+      setShipmentDocuments([])
+      setShipmentTimelineEvents([])
+      setForwarders([])
+      setBrandContacts([])
+      setBrandDocuments([])
       notify('כל המידע נמחק. אפשר להתחיל מחדש.', 'success')
     } catch (err: any) {
       notify(`המחיקה נכשלה: ${err.message ?? err}`, 'error')
@@ -484,6 +816,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       influencerSales,
       campaigns,
       campaignCreatives,
+      shipments,
+      shipmentQuotes,
+      shipmentDocuments,
+      shipmentTimelineEvents,
+      forwarders,
+      brandContacts,
+      brandDocuments,
       loading,
       storageAvailable,
       addItem,
@@ -497,6 +836,30 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       addInboxEntry,
       sortInboxEntry,
       deleteInboxEntry,
+      addBrand,
+      updateBrand,
+      deleteBrand,
+      addBrandProduct,
+      updateBrandProduct,
+      deleteBrandProduct,
+      addBrandContact,
+      updateBrandContact,
+      deleteBrandContact,
+      addBrandDocument,
+      updateBrandDocument,
+      deleteBrandDocument,
+      addShipment,
+      updateShipment,
+      deleteShipment,
+      addShipmentQuote,
+      updateShipmentQuote,
+      deleteShipmentQuote,
+      addShipmentDocument,
+      deleteShipmentDocument,
+      addShipmentTimelineEvent,
+      addForwarder,
+      updateForwarder,
+      deleteForwarder,
       addInfluencer,
       updateInfluencer,
       deleteInfluencer,
@@ -532,6 +895,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       influencerSales,
       campaigns,
       campaignCreatives,
+      shipments,
+      shipmentQuotes,
+      shipmentDocuments,
+      shipmentTimelineEvents,
+      forwarders,
+      brandContacts,
+      brandDocuments,
       loading,
     ],
   )

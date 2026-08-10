@@ -1,0 +1,98 @@
+export type ShipmentStatus =
+  | 'preparing'
+  | 'waiting_for_quotes'
+  | 'quotes_received'
+  | 'waiting_for_pickup'
+  | 'picked_up'
+  | 'in_transit'
+  | 'customs'
+  | 'delivered'
+  | 'missing_documents'
+  | 'issue'
+
+export interface Shipment {
+  id: string
+  brandId?: string
+  supplierName?: string // טקסט חופשי כשאין עדיין רשומת מותג/ספק מקושרת
+  originCountry?: string
+  pickupAddress?: string
+  destination?: string
+  contactPerson?: string
+  contactEmail?: string
+  cartons?: number
+  weight?: number
+  dimensions?: string
+  goodsType?: string
+  shipmentValue?: number
+  currency?: string
+  requestedPickupDate?: string
+  departureDate?: string
+  eta?: string
+  selectedForwarderId?: string
+  trackingNumber?: string
+  status: ShipmentStatus
+  notes?: string
+  requestedForwarderIds?: string[] // חברות שילוח שנבחרו לבקשת הצעת מחיר
+  createdAt: string
+  updatedAt: string
+}
+
+export type QuoteStatus = 'pending' | 'recommended' | 'selected' | 'rejected'
+
+export interface ShipmentQuote {
+  id: string
+  shipmentId: string
+  forwarderName: string
+  price?: number
+  currency?: string
+  transitTimeDays?: number
+  dateReceived?: string
+  notes?: string
+  status: QuoteStatus
+  createdAt: string
+  updatedAt: string
+}
+
+export type ShipmentDocCategory = 'invoice' | 'packing_list' | 'awb' | 'dangerous_goods' | 'customs' | 'other'
+
+export interface ShipmentDocument {
+  id: string
+  shipmentId: string
+  category: ShipmentDocCategory
+  name: string
+  url?: string
+  notes?: string
+  createdAt: string
+  updatedAt: string
+}
+
+export type ShipmentTimelineStage =
+  | 'rfq_sent'
+  | 'quote_received'
+  | 'quote_selected'
+  | 'pickup_booked'
+  | 'collected'
+  | 'tracking_update'
+  | 'customs'
+  | 'delivered'
+
+export interface ShipmentTimelineEvent {
+  id: string
+  shipmentId: string
+  stage: ShipmentTimelineStage
+  date: string
+  notes?: string
+  createdAt: string
+}
+
+// רשימת חברות השילוח שאליהן אפשר לשלוח בקשת הצעת מחיר (RFQ). כרגע רק רשימה — שליחה בפועל
+// דרך מייל העבודה היא אינטגרציה עתידית, ראו src/data/contentProviders.ts לתבנית ה-Provider.
+export interface Forwarder {
+  id: string
+  name: string
+  email?: string
+  phone?: string
+  notes?: string
+  createdAt: string
+  updatedAt: string
+}

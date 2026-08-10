@@ -1,12 +1,13 @@
 import { repository } from './repository'
 import { Item, Project, InboxEntry } from '../types'
-import { Brand, BrandProduct, BrandCampaign, BrandContentItem, BrandPendingActivity, BrandMediaAsset } from '../brandTypes'
+import { Brand, BrandProduct, BrandCampaign, BrandContentItem, BrandPendingActivity, BrandMediaAsset, BrandContact, BrandDocument } from '../brandTypes'
 import { Influencer, InfluencerProduct, InfluencerContent, InfluencerSale } from '../influencerTypes'
 import { Campaign, CampaignCreative } from '../campaignTypes'
+import { Shipment, ShipmentQuote, ShipmentDocument, ShipmentTimelineEvent, Forwarder } from '../shipmentTypes'
 
 interface BackupFile {
   exportedAt: string
-  version: 1 | 2 | 3
+  version: 1 | 2 | 3 | 4
   items: Item[]
   projects: Project[]
   inbox: InboxEntry[]
@@ -22,6 +23,13 @@ interface BackupFile {
   influencerSales?: InfluencerSale[]
   campaigns?: Campaign[]
   campaignCreatives?: CampaignCreative[]
+  shipments?: Shipment[]
+  shipmentQuotes?: ShipmentQuote[]
+  shipmentDocuments?: ShipmentDocument[]
+  shipmentTimelineEvents?: ShipmentTimelineEvent[]
+  forwarders?: Forwarder[]
+  brandContacts?: BrandContact[]
+  brandDocuments?: BrandDocument[]
 }
 
 async function collectBackupData(): Promise<BackupFile> {
@@ -41,6 +49,13 @@ async function collectBackupData(): Promise<BackupFile> {
     influencerSales,
     campaigns,
     campaignCreatives,
+    shipments,
+    shipmentQuotes,
+    shipmentDocuments,
+    shipmentTimelineEvents,
+    forwarders,
+    brandContacts,
+    brandDocuments,
   ] = await Promise.all([
     repository.getAllItems(),
     repository.getAllProjects(),
@@ -57,10 +72,17 @@ async function collectBackupData(): Promise<BackupFile> {
     repository.getAllInfluencerSales(),
     repository.getAllCampaigns(),
     repository.getAllCampaignCreatives(),
+    repository.getAllShipments(),
+    repository.getAllShipmentQuotes(),
+    repository.getAllShipmentDocuments(),
+    repository.getAllShipmentTimelineEvents(),
+    repository.getAllForwarders(),
+    repository.getAllBrandContacts(),
+    repository.getAllBrandDocuments(),
   ])
   return {
     exportedAt: new Date().toISOString(),
-    version: 3,
+    version: 4,
     items,
     projects,
     inbox,
@@ -76,6 +98,13 @@ async function collectBackupData(): Promise<BackupFile> {
     influencerSales,
     campaigns,
     campaignCreatives,
+    shipments,
+    shipmentQuotes,
+    shipmentDocuments,
+    shipmentTimelineEvents,
+    forwarders,
+    brandContacts,
+    brandDocuments,
   }
 }
 
@@ -129,6 +158,13 @@ export async function importBackup(data: BackupFile) {
     ...(data.influencerSales ?? []).map((s) => repository.putInfluencerSale(s)),
     ...(data.campaigns ?? []).map((c) => repository.putCampaign(c)),
     ...(data.campaignCreatives ?? []).map((cr) => repository.putCampaignCreative(cr)),
+    ...(data.shipments ?? []).map((s) => repository.putShipment(s)),
+    ...(data.shipmentQuotes ?? []).map((q) => repository.putShipmentQuote(q)),
+    ...(data.shipmentDocuments ?? []).map((d) => repository.putShipmentDocument(d)),
+    ...(data.shipmentTimelineEvents ?? []).map((e) => repository.putShipmentTimelineEvent(e)),
+    ...(data.forwarders ?? []).map((f) => repository.putForwarder(f)),
+    ...(data.brandContacts ?? []).map((c) => repository.putBrandContact(c)),
+    ...(data.brandDocuments ?? []).map((d) => repository.putBrandDocument(d)),
   ])
   await repository.markSeeded()
 }

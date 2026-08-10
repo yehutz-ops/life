@@ -36,7 +36,7 @@ export const workAreas: WorkArea[] = [
     description: 'ספקים, הזמנות ומשלוחים',
     imageSrc: '/hub-images/work/shipments.jpg',
     icon: TruckIcon,
-    to: '/work/area/import-shipping',
+    to: '/work/shipments',
   },
   {
     id: 'influencers',

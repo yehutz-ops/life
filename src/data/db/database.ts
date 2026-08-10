@@ -1,5 +1,5 @@
 const DB_NAME = 'life-control-center'
-const DB_VERSION = 3
+const DB_VERSION = 4
 
 export const STORES = {
   items: 'items',
@@ -18,6 +18,13 @@ export const STORES = {
   influencerSales: 'influencerSales',
   campaigns: 'campaigns',
   campaignCreatives: 'campaignCreatives',
+  shipments: 'shipments',
+  shipmentQuotes: 'shipmentQuotes',
+  shipmentDocuments: 'shipmentDocuments',
+  shipmentTimelineEvents: 'shipmentTimelineEvents',
+  forwarders: 'forwarders',
+  brandContacts: 'brandContacts',
+  brandDocuments: 'brandDocuments',
 } as const
 
 let dbPromise: Promise<IDBDatabase> | null = null
@@ -55,11 +62,25 @@ export function openDB(): Promise<IDBDatabase> {
       if (!db.objectStoreNames.contains(STORES.influencerSales)) db.createObjectStore(STORES.influencerSales, { keyPath: 'id' })
       if (!db.objectStoreNames.contains(STORES.campaigns)) db.createObjectStore(STORES.campaigns, { keyPath: 'id' })
       if (!db.objectStoreNames.contains(STORES.campaignCreatives)) db.createObjectStore(STORES.campaignCreatives, { keyPath: 'id' })
+      // מעקב משלוחים/יבוא + אנשי קשר ומסמכים אצל מותג/ספק.
+      if (!db.objectStoreNames.contains(STORES.shipments)) db.createObjectStore(STORES.shipments, { keyPath: 'id' })
+      if (!db.objectStoreNames.contains(STORES.shipmentQuotes)) db.createObjectStore(STORES.shipmentQuotes, { keyPath: 'id' })
+      if (!db.objectStoreNames.contains(STORES.shipmentDocuments)) db.createObjectStore(STORES.shipmentDocuments, { keyPath: 'id' })
+      if (!db.objectStoreNames.contains(STORES.shipmentTimelineEvents)) db.createObjectStore(STORES.shipmentTimelineEvents, { keyPath: 'id' })
+      if (!db.objectStoreNames.contains(STORES.forwarders)) db.createObjectStore(STORES.forwarders, { keyPath: 'id' })
+      if (!db.objectStoreNames.contains(STORES.brandContacts)) db.createObjectStore(STORES.brandContacts, { keyPath: 'id' })
+      if (!db.objectStoreNames.contains(STORES.brandDocuments)) db.createObjectStore(STORES.brandDocuments, { keyPath: 'id' })
     }
 
-    req.onsuccess = () => resolve(req.result)
+    req.onsuccess = () => {
+      const db = req.result
+      // טאב אחר (גרסה ישנה יותר של האתר, לדוגמה טאב פתוח מלפני עדכון) עלול להחזיק חיבור פתוח
+      // ולחסום שדרוג גרסה עתידי. סגירה עצמית כאן משחררת אותו אוטומטית בלי להצריך רענון ידני.
+      db.onversionchange = () => db.close()
+      resolve(db)
+    }
     req.onerror = () => reject(req.error ?? new Error('לא הצלחתי לפתוח את מסד הנתונים המקומי'))
-    req.onblocked = () => reject(new Error('מסד הנתונים המקומי חסום — כנראה יש טאב אחר פתוח עם גרסה ישנה'))
+    req.onblocked = () => reject(new Error('מסד הנתונים המקומי חסום — כנראה יש טאב אחר פתוח עם גרסה ישנה. נסה לרענן את שאר הטאבים הפתוחים.'))
   })
 
   return dbPromise

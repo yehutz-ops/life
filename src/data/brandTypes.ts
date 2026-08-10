@@ -82,6 +82,45 @@ export interface BrandMediaAsset {
   lastImportedAt: string
 }
 
+// אנשי קשר אצל מותג/ספק — לשימוש גם באזור מותגים וגם במסך משלוחים (Brand מייצג שניהם).
+export interface BrandContact {
+  id: string
+  brandId: string
+  name: string
+  role?: string
+  email?: string
+  phone?: string
+  whatsapp?: string
+  notes?: string
+  createdAt: string
+  updatedAt: string
+}
+
+export type BrandDocCategory =
+  | 'sds_msds'
+  | 'dangerous_goods'
+  | 'regulatory'
+  | 'certificates'
+  | 'invoices'
+  | 'packing_lists'
+  | 'agreements'
+  | 'product_documents'
+  | 'other'
+
+// תיקיית מסמכים עסקיים/רגולטוריים של המותג — נפרד מ-BrandMediaAsset (שהוא מניפסט מדיה
+// יצירתית שמגיע מייבוא). כרגע רק קישור/שם, בלי אחסון קבצים אמיתי.
+export interface BrandDocument {
+  id: string
+  brandId: string
+  category: BrandDocCategory
+  name: string
+  url?: string
+  relatedProductId?: string
+  notes?: string
+  createdAt: string
+  updatedAt: string
+}
+
 export interface BrandBundle {
   brand: Brand
   products: BrandProduct[]

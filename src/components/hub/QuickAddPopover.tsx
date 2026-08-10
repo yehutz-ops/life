@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react'
 export interface QuickAddField {
   key: string
   label: string
-  type: 'text' | 'textarea' | 'select' | 'number' | 'date'
+  type: 'text' | 'textarea' | 'select' | 'number' | 'date' | 'multiselect'
   options?: { value: string; label: string }[]
   placeholder?: string
   required?: boolean
@@ -83,6 +83,35 @@ export default function QuickAddPopover({
             </option>
           ))}
         </select>
+      )
+    }
+    if (field.type === 'multiselect') {
+      const selected = value ? value.split(',') : []
+      function toggle(optValue: string) {
+        const next = selected.includes(optValue) ? selected.filter((v) => v !== optValue) : [...selected, optValue]
+        set(field.key, next.join(','))
+      }
+      return (
+        <div className="flex flex-wrap gap-1.5">
+          {(field.options ?? []).length === 0 && <span className="text-xs text-stone-400 dark:text-stone-500">אין עדיין אפשרויות</span>}
+          {field.options?.map((o) => {
+            const active = selected.includes(o.value)
+            return (
+              <button
+                type="button"
+                key={o.value}
+                onClick={() => toggle(o.value)}
+                className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+                  active
+                    ? 'bg-amber-800 text-white border-amber-800'
+                    : 'bg-white text-stone-500 border-stone-200 hover:border-stone-300 dark:bg-stone-900 dark:text-stone-400 dark:border-stone-700'
+                }`}
+              >
+                {o.label}
+              </button>
+            )
+          })}
+        </div>
       )
     }
     if (field.type === 'textarea') {

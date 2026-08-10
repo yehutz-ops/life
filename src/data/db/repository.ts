@@ -1,7 +1,8 @@
 import { Item, Project, InboxEntry } from '../types'
-import { Brand, BrandProduct, BrandCampaign, BrandContentItem, BrandPendingActivity, BrandMediaAsset } from '../brandTypes'
+import { Brand, BrandProduct, BrandCampaign, BrandContentItem, BrandPendingActivity, BrandMediaAsset, BrandContact, BrandDocument } from '../brandTypes'
 import { Influencer, InfluencerProduct, InfluencerContent, InfluencerSale } from '../influencerTypes'
 import { Campaign, CampaignCreative } from '../campaignTypes'
+import { Shipment, ShipmentQuote, ShipmentDocument, ShipmentTimelineEvent, Forwarder } from '../shipmentTypes'
 import { STORES, getAll, put, remove, clearStore, getMeta, setMeta } from './database'
 
 export const repository = {
@@ -65,6 +66,34 @@ export const repository = {
   putCampaignCreative: (creative: CampaignCreative) => put(STORES.campaignCreatives, creative),
   deleteCampaignCreative: (id: string) => remove(STORES.campaignCreatives, id),
 
+  getAllShipments: () => getAll<Shipment>(STORES.shipments),
+  putShipment: (shipment: Shipment) => put(STORES.shipments, shipment),
+  deleteShipment: (id: string) => remove(STORES.shipments, id),
+
+  getAllShipmentQuotes: () => getAll<ShipmentQuote>(STORES.shipmentQuotes),
+  putShipmentQuote: (quote: ShipmentQuote) => put(STORES.shipmentQuotes, quote),
+  deleteShipmentQuote: (id: string) => remove(STORES.shipmentQuotes, id),
+
+  getAllShipmentDocuments: () => getAll<ShipmentDocument>(STORES.shipmentDocuments),
+  putShipmentDocument: (doc: ShipmentDocument) => put(STORES.shipmentDocuments, doc),
+  deleteShipmentDocument: (id: string) => remove(STORES.shipmentDocuments, id),
+
+  getAllShipmentTimelineEvents: () => getAll<ShipmentTimelineEvent>(STORES.shipmentTimelineEvents),
+  putShipmentTimelineEvent: (event: ShipmentTimelineEvent) => put(STORES.shipmentTimelineEvents, event),
+  deleteShipmentTimelineEvent: (id: string) => remove(STORES.shipmentTimelineEvents, id),
+
+  getAllForwarders: () => getAll<Forwarder>(STORES.forwarders),
+  putForwarder: (forwarder: Forwarder) => put(STORES.forwarders, forwarder),
+  deleteForwarder: (id: string) => remove(STORES.forwarders, id),
+
+  getAllBrandContacts: () => getAll<BrandContact>(STORES.brandContacts),
+  putBrandContact: (contact: BrandContact) => put(STORES.brandContacts, contact),
+  deleteBrandContact: (id: string) => remove(STORES.brandContacts, id),
+
+  getAllBrandDocuments: () => getAll<BrandDocument>(STORES.brandDocuments),
+  putBrandDocument: (doc: BrandDocument) => put(STORES.brandDocuments, doc),
+  deleteBrandDocument: (id: string) => remove(STORES.brandDocuments, id),
+
   clearAll: async () => {
     await clearStore(STORES.items)
     await clearStore(STORES.projects)
@@ -81,6 +110,13 @@ export const repository = {
     await clearStore(STORES.influencerSales)
     await clearStore(STORES.campaigns)
     await clearStore(STORES.campaignCreatives)
+    await clearStore(STORES.shipments)
+    await clearStore(STORES.shipmentQuotes)
+    await clearStore(STORES.shipmentDocuments)
+    await clearStore(STORES.shipmentTimelineEvents)
+    await clearStore(STORES.forwarders)
+    await clearStore(STORES.brandContacts)
+    await clearStore(STORES.brandDocuments)
     await setMeta('seeded', 'true')
   },
 

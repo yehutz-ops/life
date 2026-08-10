@@ -1,25 +1,66 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useStore } from '../data/StoreContext'
 import { Card, EmptyLine } from '../components/ui'
+import QuickAddPopover, { QuickAddField } from '../components/hub/QuickAddPopover'
+
+const ADD_BRAND_FIELDS: QuickAddField[] = [
+  { key: 'name', label: 'שם המותג', type: 'text', required: true },
+  {
+    key: 'priority',
+    label: 'עדיפות',
+    type: 'select',
+    options: [
+      { value: 'high', label: 'גבוהה' },
+      { value: 'medium', label: 'בינונית' },
+      { value: 'low', label: 'נמוכה' },
+    ],
+  },
+  { key: 'country_of_origin', label: 'מדינת מקור', type: 'text', secondary: true },
+  { key: 'website', label: 'אתר', type: 'text', secondary: true },
+  { key: 'description', label: 'תיאור המותג', type: 'textarea', secondary: true },
+  { key: 'notes', label: 'הערות', type: 'textarea', secondary: true },
+]
 
 export default function BrandsPage() {
-  const { brands, brandProducts, brandContentItems } = useStore()
+  const { brands, brandProducts, brandContentItems, addBrand } = useStore()
+  const [addOpen, setAddOpen] = useState(false)
+
+  async function handleAddBrand(values: Record<string, string>) {
+    await addBrand({
+      name: values.name?.trim(),
+      domain: 'work',
+      fields: {
+        priority: values.priority || undefined,
+        country_of_origin: values.country_of_origin?.trim() || undefined,
+        website: values.website?.trim() || undefined,
+        description: values.description?.trim() || undefined,
+        notes: values.notes?.trim() || undefined,
+      },
+    })
+    setAddOpen(false)
+  }
 
   return (
     <div className="space-y-6 pb-24">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-3 flex-wrap">
         <div>
           <h1 className="text-2xl font-extrabold text-stone-900 dark:text-stone-100">מותגים</h1>
           <p className="text-stone-500 dark:text-stone-400 mt-1 text-sm">כל המותגים שמנוהלים בתחום העבודה — שיתופי פעולה, תוכן וקמפיינים</p>
         </div>
-        <Link to="/work/brands/import" className="px-4 py-2 rounded-xl bg-amber-800 text-white text-sm font-medium hover:bg-amber-900">
-          ייבוא חבילת מותג
-        </Link>
+        <div className="flex items-center gap-2">
+          <button onClick={() => setAddOpen(true)} className="px-4 py-2 rounded-xl border border-amber-800 text-amber-800 dark:text-amber-400 dark:border-amber-700 text-sm font-medium">
+            + הוסף מותג
+          </button>
+          <Link to="/work/brands/import" className="px-4 py-2 rounded-xl bg-amber-800 text-white text-sm font-medium hover:bg-amber-900">
+            ייבוא חבילת מותג
+          </Link>
+        </div>
       </div>
 
       {brands.length === 0 ? (
         <Card>
-          <EmptyLine text="עדיין אין מותגים במערכת. ייבוא חבילת מותג מקובץ JSON יוסיף כאן את המותג הראשון." />
+          <EmptyLine text="עדיין אין מותגים במערכת. אפשר להוסיף מותג ידנית או לייבא חבילת מותג מקובץ JSON." />
         </Card>
       ) : (
         <div className="grid sm:grid-cols-2 gap-4">
@@ -45,6 +86,8 @@ export default function BrandsPage() {
           })}
         </div>
       )}
+
+      <QuickAddPopover open={addOpen} title="הוספת מותג" fields={ADD_BRAND_FIELDS} onClose={() => setAddOpen(false)} onSave={handleAddBrand} />
     </div>
   )
 }
