@@ -1,0 +1,61 @@
+import { TagIcon, BulbIcon, TruckIcon, UsersIcon, ChecklistIcon } from '../components/hub/hubIcons'
+
+export type WorkAreaId = 'brand-promotion' | 'content-ideas' | 'import-shipping' | 'influencers' | 'more'
+
+export interface WorkArea {
+  id: WorkAreaId
+  name: string
+  description: string
+  imageSrc: string
+  icon: (props: { className?: string }) => JSX.Element
+  // 'brands' — הכרטיס היחיד שמוביל למערכת קיימת ובנויה (/work/brands). כל השאר הם כרגע רק
+  // נקודות כניסה חזותיות ומובילים לעמוד "בקרוב" עד שכל אזור ייפתח בנפרד.
+  to: string
+}
+
+export const workAreas: WorkArea[] = [
+  {
+    id: 'brand-promotion',
+    name: 'קידום מותגים',
+    description: 'מותגים, תוכן מותגי וקמפיינים',
+    imageSrc: '/hub-images/work/brands.jpg',
+    icon: TagIcon,
+    to: '/work/brands',
+  },
+  {
+    id: 'content-ideas',
+    name: 'רעיונות וכתיבת תסריטים',
+    description: 'רעיונות לתוכן, Reels ותסריטים',
+    imageSrc: '/hub-images/work/content-ideas.jpg',
+    icon: BulbIcon,
+    to: '/work/area/content-ideas',
+  },
+  {
+    id: 'import-shipping',
+    name: 'יבוא ומשלוחים',
+    description: 'ספקים, הזמנות ומשלוחים',
+    imageSrc: '/hub-images/work/shipments.jpg',
+    icon: TruckIcon,
+    to: '/work/area/import-shipping',
+  },
+  {
+    id: 'influencers',
+    name: 'משפיענים',
+    description: 'יוצרי תוכן ושיתופי פעולה',
+    imageSrc: '/hub-images/work/collaborations.jpg',
+    icon: UsersIcon,
+    to: '/work/area/influencers',
+  },
+  {
+    id: 'more',
+    name: 'נוספים',
+    description: 'משימות עבודה כלליות',
+    imageSrc: '/hub-images/work/more.jpg',
+    icon: ChecklistIcon,
+    to: '/work/area/more',
+  },
+]
+
+export function getWorkArea(id: WorkAreaId): WorkArea {
+  return workAreas.find((a) => a.id === id)!
+}

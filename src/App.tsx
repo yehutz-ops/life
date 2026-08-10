@@ -7,6 +7,7 @@ import CalendarPage from './pages/CalendarPage'
 import DomainPage from './pages/DomainPage'
 import WorkPage from './pages/WorkPage'
 import WorkCategoryPage from './pages/WorkCategoryPage'
+import WorkAreaComingSoonPage from './pages/WorkAreaComingSoonPage'
 import HouseholdPage from './pages/HouseholdPage'
 import PersonalPage from './pages/PersonalPage'
 import FinancePage from './pages/FinancePage'
@@ -48,6 +49,7 @@ export default function App() {
                         <Route path="work/brands" element={<BrandsPage />} />
                         <Route path="work/brands/import" element={<BrandImportPage />} />
                         <Route path="work/brands/:brandId" element={<BrandDetailPage />} />
+                        <Route path="work/area/:areaId" element={<WorkAreaComingSoonPage />} />
                         <Route path="work/:categoryId" element={<WorkCategoryPage />} />
                         <Route path="studies" element={<DomainPage domainId="studies" />} />
                         <Route path="personal" element={<PersonalPage />} />
