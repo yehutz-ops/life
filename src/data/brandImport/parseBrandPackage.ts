@@ -39,6 +39,10 @@ export function parseBrandPackage(raw: any): ParsedBrandBundle {
       instagramComposio: raw.instagram_composio ?? null,
       standingRules: raw.standing_rules ?? [],
       missingInformation: raw.missing_information ?? [],
+      // דרופבוקס הוא מקור המדיה — נשמר כהפניה בלבד (לא מעתיקים בינארי), כולל מדיה חסרה שדורשת קישור בהמשך.
+      mediaAssetsInfo: raw.media_assets
+        ? { note: raw.media_assets.note ?? undefined, dropboxMirror: raw.media_assets.dropbox_mirror ?? undefined, missingMedia: raw.media_assets.missing_media ?? [] }
+        : null,
     },
   }
 
