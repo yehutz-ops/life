@@ -4,7 +4,7 @@ import { useStore } from '../data/StoreContext'
 import { TruckIcon } from '../components/hub/hubIcons'
 import { Card, EmptyLine } from '../components/ui'
 import StatusPill, { PillTone } from '../components/hub/StatusPill'
-import QuickAddPopover, { QuickAddField } from '../components/hub/QuickAddPopover'
+import QuickAddPopover from '../components/hub/QuickAddPopover'
 import { useNotify } from '../data/NotificationContext'
 import { ShipmentStatus } from '../data/shipmentTypes'
 
@@ -45,38 +45,10 @@ const NEXT_ACTION: Record<ShipmentStatus, string> = {
   issue: 'לטפל בבעיה',
 }
 
-const NEW_SHIPMENT_FIELDS_PRIMARY: QuickAddField[] = [
-  { key: 'goodsType', label: 'סוג הסחורה', type: 'text', placeholder: 'לדוגמה: בשמים' },
-  { key: 'requestedPickupDate', label: 'תאריך איסוף מבוקש', type: 'date' },
-]
-
 export default function ShipmentsPage() {
-  const { shipments, brands, forwarders, addShipment, addShipmentDocument, addForwarder, reloadFromDisk } = useStore()
+  const { shipments, brands, addForwarder, reloadFromDisk } = useStore()
   const notify = useNotify()
-  const [addOpen, setAddOpen] = useState(false)
   const [addForwarderOpen, setAddForwarderOpen] = useState(false)
-
-  const NEW_SHIPMENT_FIELDS: QuickAddField[] = useMemo(
-    () => [
-      { key: 'brandId', label: 'מותג', type: 'select', options: brands.map((b) => ({ value: b.id, label: b.name })) },
-      { key: 'supplierName', label: 'ספק (אם אין מותג ברשימה)', type: 'text' },
-      ...NEW_SHIPMENT_FIELDS_PRIMARY,
-      { key: 'originCountry', label: 'מדינת מוצא', type: 'text', secondary: true },
-      { key: 'pickupAddress', label: 'כתובת איסוף', type: 'text', secondary: true },
-      { key: 'contactPerson', label: 'איש קשר', type: 'text', secondary: true },
-      { key: 'contactEmail', label: 'Email איש קשר', type: 'text', secondary: true },
-      { key: 'cartons', label: 'מספר קרטונים', type: 'number', secondary: true },
-      { key: 'weight', label: 'משקל (ק"ג)', type: 'number', secondary: true },
-      { key: 'dimensions', label: 'מידות', type: 'text', secondary: true },
-      { key: 'shipmentValue', label: 'שווי המשלוח', type: 'number', secondary: true },
-      { key: 'currency', label: 'מטבע', type: 'text', placeholder: 'USD / ILS', secondary: true },
-      { key: 'notes', label: 'הערות', type: 'textarea', secondary: true },
-      { key: 'packingListUrl', label: 'קישור ל-Packing List', type: 'text', secondary: true },
-      { key: 'invoiceUrl', label: 'קישור ל-Invoice', type: 'text', secondary: true },
-      { key: 'forwarderIds', label: 'חברות שילוח לבקשת הצעת מחיר', type: 'multiselect', options: forwarders.map((f) => ({ value: f.id, label: f.name })), secondary: true },
-    ],
-    [brands, forwarders],
-  )
 
   const kpis = useMemo(() => {
     const active = shipments.filter((s) => s.status !== 'delivered').length
@@ -88,35 +60,6 @@ export default function ShipmentsPage() {
   }, [shipments])
 
   const sortedShipments = useMemo(() => [...shipments].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)), [shipments])
-
-  async function handleAddShipment(values: Record<string, string>) {
-    const shipment = await addShipment({
-      brandId: values.brandId || undefined,
-      supplierName: values.supplierName?.trim() || undefined,
-      originCountry: values.originCountry?.trim() || undefined,
-      pickupAddress: values.pickupAddress?.trim() || undefined,
-      contactPerson: values.contactPerson?.trim() || undefined,
-      contactEmail: values.contactEmail?.trim() || undefined,
-      cartons: values.cartons ? Number(values.cartons) : undefined,
-      weight: values.weight ? Number(values.weight) : undefined,
-      dimensions: values.dimensions?.trim() || undefined,
-      goodsType: values.goodsType?.trim() || undefined,
-      shipmentValue: values.shipmentValue ? Number(values.shipmentValue) : undefined,
-      currency: values.currency?.trim() || undefined,
-      requestedPickupDate: values.requestedPickupDate || undefined,
-      notes: values.notes?.trim() || undefined,
-      requestedForwarderIds: values.forwarderIds ? values.forwarderIds.split(',').filter(Boolean) : undefined,
-      status: 'preparing',
-    })
-    if (values.packingListUrl?.trim()) {
-      await addShipmentDocument({ shipmentId: shipment.id, category: 'packing_list', name: 'Packing List', url: values.packingListUrl.trim() })
-    }
-    if (values.invoiceUrl?.trim()) {
-      await addShipmentDocument({ shipmentId: shipment.id, category: 'invoice', name: 'Invoice', url: values.invoiceUrl.trim() })
-    }
-    setAddOpen(false)
-    notify('בקשת הצעת מחיר / משלוח חדש נוצרו בהצלחה', 'success')
-  }
 
   async function handleAddForwarder(values: Record<string, string>) {
     await addForwarder({ name: values.name?.trim(), email: values.email?.trim() || undefined, phone: values.phone?.trim() || undefined })
@@ -160,9 +103,9 @@ export default function ShipmentsPage() {
           <button onClick={refreshStatuses} className="px-3.5 py-2 rounded-xl border border-stone-200 dark:border-stone-700 text-xs font-medium text-stone-500 dark:text-stone-400 hover:bg-stone-50 dark:hover:bg-stone-800">
             רענון סטטוסים
           </button>
-          <button onClick={() => setAddOpen(true)} className="px-4 py-2 rounded-xl bg-amber-800 text-white text-sm font-medium hover:bg-amber-900">
+          <Link to="/work/shipments/new" className="px-4 py-2 rounded-xl bg-amber-800 text-white text-sm font-medium hover:bg-amber-900">
             + בקשת הצעת מחיר חדשה
-          </button>
+          </Link>
         </div>
       </div>
 
@@ -195,7 +138,7 @@ export default function ShipmentsPage() {
               <Link to={`/work/shipments/${s.id}`} className="block">
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-sm font-medium text-stone-800 dark:text-stone-100">
-                    #{s.id.slice(-6)} · {brandName(s.brandId) ?? s.supplierName ?? 'ספק לא ידוע'}
+                    #{s.id.slice(-6)} · {s.name ?? brandName(s.brandId) ?? s.supplierName ?? 'ספק לא ידוע'}
                   </span>
                   <StatusPill label={STATUS_LABEL[s.status]} tone={STATUS_TONE[s.status]} />
                 </div>
@@ -210,7 +153,6 @@ export default function ShipmentsPage() {
         </ul>
       </Card>
 
-      <QuickAddPopover open={addOpen} title="בקשת הצעת מחיר / משלוח חדש" fields={NEW_SHIPMENT_FIELDS} onClose={() => setAddOpen(false)} onSave={handleAddShipment} />
       <QuickAddPopover
         open={addForwarderOpen}
         title="הוספת חברת שילוח"

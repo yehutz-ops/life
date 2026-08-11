@@ -44,6 +44,7 @@ const QUOTE_STATUS_TONE: Record<QuoteStatus, PillTone> = { pending: 'neutral', r
 const DOC_CATEGORY_LABEL: Record<ShipmentDocCategory, string> = {
   invoice: 'Invoice',
   packing_list: 'Packing List',
+  msds_sds: 'MSDS / SDS',
   awb: 'AWB',
   dangerous_goods: 'Dangerous Goods',
   customs: 'Customs',

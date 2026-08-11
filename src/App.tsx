@@ -14,6 +14,7 @@ import CampaignsPage from './pages/CampaignsPage'
 import CampaignDetailPage from './pages/CampaignDetailPage'
 import ShipmentsPage from './pages/ShipmentsPage'
 import ShipmentDetailPage from './pages/ShipmentDetailPage'
+import NewShipmentRequestPage from './pages/NewShipmentRequestPage'
 import HouseholdPage from './pages/HouseholdPage'
 import PersonalPage from './pages/PersonalPage'
 import FinancePage from './pages/FinancePage'
@@ -66,6 +67,7 @@ export default function App() {
                         <Route path="work/campaigns" element={<CampaignsPage />} />
                         <Route path="work/campaigns/:campaignId" element={<CampaignDetailPage />} />
                         <Route path="work/shipments" element={<ShipmentsPage />} />
+                        <Route path="work/shipments/new" element={<NewShipmentRequestPage />} />
                         <Route path="work/shipments/:shipmentId" element={<ShipmentDetailPage />} />
                         <Route path="work/ideas" element={<IdeaBankPage />} />
                         <Route path="work/scripts" element={<VideoScriptsPage />} />

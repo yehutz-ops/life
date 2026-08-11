@@ -1,6 +1,7 @@
 import type { Plugin } from 'vite'
 import type { IncomingMessage, ServerResponse } from 'http'
 import { handleAiCommand, testConnection, classifyError } from './aiHandler'
+import { handleShipmentExtract } from './shipmentExtractHandler'
 
 function readBody(req: IncomingMessage): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -54,6 +55,24 @@ export function aiServerPlugin(apiKey: string): Plugin {
           } catch (err: any) {
             // פרטי השגיאה נכתבים רק למסוף השרת — לעולם לא כוללים את מפתח ה-API.
             console.error('[ai/command] failed:', err?.message ?? err)
+            const classified = classifyError(err)
+            sendJson(res, 502, { error: classified.type, message: classified.message })
+          }
+          return
+        }
+
+        if (req.url === '/api/ai/extract-shipment' && req.method === 'POST') {
+          if (!apiKey) {
+            sendJson(res, 400, { error: 'no_key', message: 'חיבור Claude AI עדיין לא הוגדר.' })
+            return
+          }
+          try {
+            const raw = await readBody(req)
+            const body = JSON.parse(raw)
+            const { result, usage } = await handleShipmentExtract(apiKey, body)
+            sendJson(res, 200, { result, usage })
+          } catch (err: any) {
+            console.error('[ai/extract-shipment] failed:', err?.message ?? err)
             const classified = classifyError(err)
             sendJson(res, 502, { error: classified.type, message: classified.message })
           }

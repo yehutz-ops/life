@@ -10,19 +10,28 @@ export type ShipmentStatus =
   | 'missing_documents'
   | 'issue'
 
+export type ShippingMode = 'air' | 'sea' | 'other'
+
 export interface Shipment {
   id: string
   brandId?: string
+  name?: string // כותרת/שם למשלוח, לדוגמה לבקשת הצעת מחיר
   supplierName?: string // טקסט חופשי כשאין עדיין רשומת מותג/ספק מקושרת
   originCountry?: string
+  originCity?: string
+  shippingMode?: ShippingMode
   pickupAddress?: string
   destination?: string
   contactPerson?: string
   contactEmail?: string
+  contactPhone?: string
   cartons?: number
   weight?: number
   dimensions?: string
+  onPallet?: boolean
+  palletCount?: number
   goodsType?: string
+  isDangerousGoods?: boolean
   shipmentValue?: number
   currency?: string
   requestedPickupDate?: string
@@ -53,7 +62,7 @@ export interface ShipmentQuote {
   updatedAt: string
 }
 
-export type ShipmentDocCategory = 'invoice' | 'packing_list' | 'awb' | 'dangerous_goods' | 'customs' | 'other'
+export type ShipmentDocCategory = 'invoice' | 'packing_list' | 'msds_sds' | 'awb' | 'dangerous_goods' | 'customs' | 'other'
 
 export interface ShipmentDocument {
   id: string
@@ -61,6 +70,11 @@ export interface ShipmentDocument {
   category: ShipmentDocCategory
   name: string
   url?: string
+  // קובץ מצורף מקומית (נשמר כ-Blob ישירות ב-IndexedDB, בלי שרת/אחסון חיצוני).
+  fileName?: string
+  fileType?: string
+  fileSize?: number
+  fileData?: Blob
   notes?: string
   createdAt: string
   updatedAt: string
@@ -90,8 +104,10 @@ export interface ShipmentTimelineEvent {
 export interface Forwarder {
   id: string
   name: string
+  contactPerson?: string
   email?: string
   phone?: string
+  active?: boolean // undefined/true = פעיל, false בלבד = לא פעיל (כך רשומות ישנות ממשיכות להיחשב פעילות)
   notes?: string
   createdAt: string
   updatedAt: string
