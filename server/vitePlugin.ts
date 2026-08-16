@@ -2,6 +2,7 @@ import type { Plugin } from 'vite'
 import type { IncomingMessage, ServerResponse } from 'http'
 import { handleAiCommand, testConnection, classifyError } from './aiHandler'
 import { handleShipmentExtract } from './shipmentExtractHandler'
+import { checkEmailHealth, testEmailConnection, sendRfqEmails, classifyEmailError, EmailConfig } from './emailHandler'
 
 function readBody(req: IncomingMessage): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -74,6 +75,53 @@ export function aiServerPlugin(apiKey: string): Plugin {
           } catch (err: any) {
             console.error('[ai/extract-shipment] failed:', err?.message ?? err)
             const classified = classifyError(err)
+            sendJson(res, 502, { error: classified.type, message: classified.message })
+          }
+          return
+        }
+
+        next()
+      })
+    },
+  }
+}
+
+// שרת Gmail — מקביל בדיוק ל-aiServerPlugin, אך לדומיין שליחת מיילים (RFQ). מפתח נפרד לגמרי מ-Claude AI.
+export function emailServerPlugin(config: Partial<EmailConfig>): Plugin {
+  return {
+    name: 'life-control-center-email-server',
+    configureServer(server) {
+      server.middlewares.use(async (req, res, next) => {
+        if (!req.url) return next()
+
+        if (req.url === '/api/email/health' && req.method === 'GET') {
+          sendJson(res, 200, checkEmailHealth(config))
+          return
+        }
+
+        if (req.url === '/api/email/test-connection' && req.method === 'POST') {
+          if (!config.user || !config.appPassword) {
+            sendJson(res, 200, { ok: false, error: { type: 'no_key', message: 'חיבור תיבת המייל עדיין לא הוגדר.' } })
+            return
+          }
+          const result = await testEmailConnection(config as EmailConfig)
+          sendJson(res, 200, result)
+          return
+        }
+
+        if (req.url === '/api/email/send-rfq' && req.method === 'POST') {
+          if (!config.user || !config.appPassword) {
+            sendJson(res, 400, { error: 'no_key', message: 'חיבור תיבת המייל עדיין לא הוגדר.' })
+            return
+          }
+          try {
+            const raw = await readBody(req)
+            const body = JSON.parse(raw)
+            const results = await sendRfqEmails(config as EmailConfig, body)
+            sendJson(res, 200, { results })
+          } catch (err: any) {
+            console.error('[email/send-rfq] failed:', err?.message ?? err)
+            const classified = classifyEmailError(err)
             sendJson(res, 502, { error: classified.type, message: classified.message })
           }
           return

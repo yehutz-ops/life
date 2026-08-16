@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useStore } from '../data/StoreContext'
 import { useNotify } from '../data/NotificationContext'
+import { useConfirm } from '../data/ConfirmContext'
 import { Card } from '../components/ui'
 import { TruckIcon } from '../components/hub/hubIcons'
 import QuickAddPopover, { QuickAddField } from '../components/hub/QuickAddPopover'
@@ -10,6 +11,7 @@ import { ShippingMode, ShipmentDocCategory, Forwarder } from '../data/shipmentTy
 import { getAiEnabled } from '../ai/aiSettings'
 import { checkAiHealth } from '../ai/aiClient'
 import { extractShipmentDetails, ShipmentExtractError, ShipmentExtractResult, ShipmentFieldResult } from '../ai/shipmentExtract'
+import { checkEmailHealth, sendRfqEmails, RfqEmailError, RfqEmailResult } from '../email/sendRfqEmail'
 
 const SHIPPING_MODE_LABEL: Record<ShippingMode, string> = { air: 'אווירי', sea: 'ימי', other: 'אחר' }
 
@@ -183,6 +185,7 @@ export default function NewShipmentRequestPage() {
   const { forwarders, addForwarder, updateForwarder, addShipment, addShipmentDocument, addShipmentTimelineEvent } = useStore()
   const notify = useNotify()
   const navigate = useNavigate()
+  const confirm = useConfirm()
 
   const [form, setForm] = useState<FormState>(EMPTY_FORM)
   const [docs, setDocs] = useState<LocalDoc[]>([])
@@ -195,9 +198,12 @@ export default function NewShipmentRequestPage() {
   const [fieldMeta, setFieldMeta] = useState<Partial<Record<keyof FormState, ShipmentFieldResult>>>({})
   const [aiEnabled] = useState(getAiEnabled())
   const [aiHealthy, setAiHealthy] = useState<boolean | null>(null)
+  const [emailHealthy, setEmailHealthy] = useState<boolean | null>(null)
+  const [sending, setSending] = useState(false)
 
   useEffect(() => {
     checkAiHealth().then(setAiHealthy)
+    checkEmailHealth().then(setEmailHealthy)
   }, [])
 
   const [selectionMode, setSelectionMode] = useState<'all-active' | 'manual'>('all-active')
@@ -376,14 +382,81 @@ export default function NewShipmentRequestPage() {
       ),
     )
 
-    await addShipmentTimelineEvent({
-      shipmentId: shipment.id,
-      stage: 'rfq_sent',
-      date: todayISO(),
-      notes: `בקשת הצעת מחיר הוכנה עבור: ${selectedForwarders.map((f) => f.name).join(', ')}`,
+    // תיבת מייל לא מחוברת — אותה התנהגות בדיוק כמו קודם: שמירה מקומית בלבד, בלי לנסות לשלוח.
+    if (!emailHealthy) {
+      await addShipmentTimelineEvent({
+        shipmentId: shipment.id,
+        stage: 'rfq_sent',
+        date: todayISO(),
+        notes: `בקשת הצעת מחיר הוכנה עבור: ${selectedForwarders.map((f) => f.name).join(', ')}`,
+      })
+      notify('הבקשה נשמרה ומוכנה לשליחה. חיבור תיבת המייל של המערכת יאפשר שליחה אוטומטית בעתיד.', 'success')
+      navigate(`/work/shipments/${shipment.id}`)
+      return
+    }
+
+    const ok = await confirm({
+      title: 'לשלוח בקשת הצעת מחיר?',
+      message: `יישלח מייל נפרד לכל אחת מ-${selectedForwarders.length} הסוכנויות (לא CC משותף):\n${selectedForwarders.map((f) => `${f.name} — ${f.email ?? 'אין אימייל'}`).join('\n')}`,
+      confirmLabel: 'שלח',
     })
 
-    notify('הבקשה נשמרה ומוכנה לשליחה. חיבור תיבת המייל של המערכת יאפשר שליחה אוטומטית בעתיד.', 'success')
+    if (!ok) {
+      await addShipmentTimelineEvent({
+        shipmentId: shipment.id,
+        stage: 'rfq_sent',
+        date: todayISO(),
+        notes: `בקשת הצעת מחיר הוכנה עבור: ${selectedForwarders.map((f) => f.name).join(', ')} — טרם נשלחה`,
+      })
+      notify('הבקשה נשמרה. לא נשלח מייל כרגע.', 'info')
+      navigate(`/work/shipments/${shipment.id}`)
+      return
+    }
+
+    setSending(true)
+    try {
+      const agenciesWithEmail = selectedForwarders.filter((f): f is Forwarder & { email: string } => !!f.email)
+      const skippedNoEmail = selectedForwarders.length - agenciesWithEmail.length
+      const attachments = await Promise.all(docs.map(async (d) => ({ fileName: d.file.name, mediaType: d.file.type, base64: await fileToBase64(d.file) })))
+
+      const results: RfqEmailResult[] = agenciesWithEmail.length
+        ? await sendRfqEmails(
+            agenciesWithEmail.map((f) => ({ agencyId: f.id, name: f.name, email: f.email })),
+            subject,
+            body,
+            attachments,
+          )
+        : []
+
+      const succeeded = results.filter((r) => r.success)
+      const failed = results.filter((r) => !r.success)
+
+      const summaryParts = [
+        succeeded.length > 0 ? `נשלח ל-${succeeded.length} סוכנויות` : null,
+        failed.length > 0 ? `נכשל עבור: ${failed.map((r) => `${r.name} (${r.error?.message ?? 'שגיאה'})`).join(', ')}` : null,
+        skippedNoEmail > 0 ? `${skippedNoEmail} סוכנויות ללא כתובת אימייל דולגו` : null,
+      ].filter(Boolean)
+
+      await addShipmentTimelineEvent({
+        shipmentId: shipment.id,
+        stage: 'rfq_sent',
+        date: todayISO(),
+        notes: summaryParts.join(' · ') || 'בקשת הצעת מחיר הוכנה, לא נשלחה לאף סוכנות',
+      })
+
+      notify(summaryParts.join(' · ') || 'הבקשה נשמרה', failed.length > 0 || skippedNoEmail > 0 ? 'error' : 'success')
+    } catch (err: any) {
+      await addShipmentTimelineEvent({
+        shipmentId: shipment.id,
+        stage: 'rfq_sent',
+        date: todayISO(),
+        notes: `בקשת הצעת מחיר הוכנה עבור: ${selectedForwarders.map((f) => f.name).join(', ')} — השליחה נכשלה`,
+      })
+      notify(err instanceof RfqEmailError ? err.message : 'השליחה נכשלה. הבקשה נשמרה מקומית.', 'error')
+    } finally {
+      setSending(false)
+    }
+
     navigate(`/work/shipments/${shipment.id}`)
   }
 
@@ -787,15 +860,21 @@ export default function NewShipmentRequestPage() {
 
       {/* 7. שליחה */}
       <div className="flex items-center gap-3">
-        <button onClick={handleReady} className="px-5 py-3 rounded-xl bg-amber-800 text-white text-sm font-medium hover:bg-amber-900">
-          ✓ הבקשה מוכנה לשליחה
+        <button
+          onClick={handleReady}
+          disabled={sending}
+          className="px-5 py-3 rounded-xl bg-amber-800 text-white text-sm font-medium hover:bg-amber-900 disabled:opacity-50"
+        >
+          {sending ? 'שולח...' : emailHealthy ? '✓ שלח בקשת הצעת מחיר' : '✓ הבקשה מוכנה לשליחה'}
         </button>
         <Link to="/work/shipments" className="px-5 py-3 rounded-xl border border-stone-200 dark:border-stone-700 text-sm font-medium text-stone-600 dark:text-stone-300">
           ביטול
         </Link>
       </div>
       <p className="text-xs text-stone-400 dark:text-stone-500">
-        השליחה בפועל תתאפשר לאחר חיבור תיבת המייל של המערכת. כרגע הבקשה תישמר ותופיע כמוכנה במעקב המשלוחים.
+        {emailHealthy
+          ? 'לחיצה תבקש אישור ותשלח מייל נפרד לכל סוכנות שנבחרה, עם המסמכים המצורפים.'
+          : 'השליחה בפועל תתאפשר לאחר חיבור תיבת המייל של המערכת. כרגע הבקשה תישמר ותופיע כמוכנה במעקב המשלוחים.'}
       </p>
 
       <QuickAddPopover
