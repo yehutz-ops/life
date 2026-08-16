@@ -23,6 +23,9 @@ export type ListType =
   | 'articles'
   | 'ideas'
 
+// קטגוריות הוצאה קבועות לחשבונות בית (listType: 'bills') — ראו Item.category.
+export const BILL_CATEGORIES = ['סופר', 'חשמל', 'מים', 'אינטרנט', 'ועד בית', 'אחר'] as const
+
 export interface Item {
   id: string
   title: string
@@ -43,6 +46,7 @@ export interface Item {
   notes?: string
   amount?: number
   currency?: string
+  category?: string // סיווג הוצאה — רלוונטי רק ל-listType: 'bills', ראו BILL_CATEGORIES
   // שדות "ידע ותרבות" (הספרייה שלי / ציטוטים / מאמרים / רעיונות) — Additive, אופציונליים,
   // בשימוש רק כשרלוונטי להקשר. לא נוגעים בשום Item קיים אחר.
   itemSubtype?: string // סוג מקור/מדיה: book | article | movie | series | lecture | other

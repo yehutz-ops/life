@@ -24,7 +24,7 @@ function isMoreItem(text: string): boolean {
 }
 
 export default function WorkPage() {
-  const { items, toggleDone, influencers, campaigns, shipments } = useStore()
+  const { items, toggleDone, influencers, campaigns, shipments, ideaBankItems } = useStore()
   const { openEdit } = useDetailModal()
   const today = todayISO()
 
@@ -37,10 +37,11 @@ export default function WorkPage() {
   const moreCount = nonBrandActive.filter((it) => isMoreItem(`${it.title} ${it.notes ?? ''}`)).length
   const activeInfluencersCount = influencers.filter((i) => i.status === 'active').length
   const activeCampaignsCount = campaigns.filter((c) => c.status === 'active').length
+  const openIdeasCount = ideaBankItems.filter((i) => i.status !== 'archive').length
 
   const statByAreaId: Record<string, string> = {
     'brand-promotion': `${brandOpenCount} פתוחות`,
-    'content-ideas': 'עדיין אין רעיונות',
+    'content-ideas': openIdeasCount > 0 ? `${openIdeasCount} רעיונות` : 'עדיין אין רעיונות',
     'import-shipping': `${activeShipmentsCount} פעילים`,
     influencers: `${activeInfluencersCount} פעילים`,
     campaigns: `${activeCampaignsCount} פעילים`,

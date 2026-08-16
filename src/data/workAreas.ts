@@ -8,8 +8,7 @@ export interface WorkArea {
   description: string
   imageSrc: string
   icon: (props: { className?: string }) => JSX.Element
-  // 'brands' — הכרטיס היחיד שמוביל למערכת קיימת ובנויה (/work/brands). כל השאר הם כרגע רק
-  // נקודות כניסה חזותיות ומובילים לעמוד "בקרוב" עד שכל אזור ייפתח בנפרד.
+  // רק 'more' עדיין מוביל לעמוד "בקרוב" — שאר הכרטיסים מובילים למערכות קיימות ובנויות.
   to: string
 }
 
@@ -28,7 +27,7 @@ export const workAreas: WorkArea[] = [
     description: 'רעיונות לתוכן, Reels ותסריטים',
     imageSrc: '/hub-images/work/content-ideas.jpg',
     icon: BulbIcon,
-    to: '/work/area/content-ideas',
+    to: '/work/ideas',
   },
   {
     id: 'import-shipping',

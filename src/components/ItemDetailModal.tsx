@@ -3,7 +3,7 @@ import { useDetailModal } from '../data/DetailModalContext'
 import { useStore } from '../data/StoreContext'
 import { useConfirm } from '../data/ConfirmContext'
 import { domainList } from '../data/domains'
-import { DomainId, ItemKind, Priority, ItemStatus, WaitingType, Item } from '../data/types'
+import { DomainId, ItemKind, Priority, ItemStatus, WaitingType, Item, BILL_CATEGORIES } from '../data/types'
 import { todayISO } from '../utils/date'
 
 const kindOptions: { value: ItemKind; label: string }[] = [
@@ -40,6 +40,7 @@ const emptyForm = () => ({
   waitingType: 'my_followup' as WaitingType,
   personName: '',
   notes: '',
+  category: '',
 })
 
 export default function ItemDetailModal() {
@@ -66,6 +67,7 @@ export default function ItemDetailModal() {
         waitingType: editingItem.waitingType ?? 'my_followup',
         personName: editingItem.personName ?? '',
         notes: editingItem.notes ?? '',
+        category: editingItem.category ?? '',
       })
     } else if (target.mode === 'create') {
       const p = target.prefill
@@ -109,6 +111,7 @@ export default function ItemDetailModal() {
       waitingType: form.kind === 'waiting' ? form.waitingType : undefined,
       personName: form.personName || undefined,
       notes: form.notes || undefined,
+      category: editingItem?.listType === 'bills' ? form.category || undefined : editingItem?.category,
     }
 
     if (target?.mode === 'edit') {
@@ -195,6 +198,24 @@ export default function ItemDetailModal() {
               {waitingTypeOptions.map((w) => (
                 <option key={w.value} value={w.value}>
                   {w.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
+        {editingItem?.listType === 'bills' && (
+          <div className="mb-3">
+            <label className="text-xs text-stone-500 dark:text-stone-400 block mb-1">קטגוריית הוצאה</label>
+            <select
+              value={form.category}
+              onChange={(e) => set('category', e.target.value)}
+              className="w-full border border-stone-200 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100 rounded-xl p-2 text-sm"
+            >
+              <option value="">ללא קטגוריה</option>
+              {BILL_CATEGORIES.map((c) => (
+                <option key={c} value={c}>
+                  {c}
                 </option>
               ))}
             </select>

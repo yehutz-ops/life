@@ -1,7 +1,7 @@
 import { useParams, Navigate, Link } from 'react-router-dom'
 import { getWorkArea, WorkAreaId } from '../data/workAreas'
 
-const VALID_IDS: WorkAreaId[] = ['content-ideas', 'more']
+const VALID_IDS: WorkAreaId[] = ['more']
 
 // עמוד placeholder זמני — האזור הוא כרגע רק נקודת כניסה חזותית מ"עבודה", עדיין לא נפתח לעומק.
 export default function WorkAreaComingSoonPage() {
