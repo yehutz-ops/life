@@ -12,18 +12,16 @@ import { checkAiHealth } from '../ai/aiClient'
 import { extractShipmentDetails, ShipmentExtractError, ShipmentExtractResult, ShipmentFieldResult } from '../ai/shipmentExtract'
 
 const SHIPPING_MODE_LABEL: Record<ShippingMode, string> = { air: 'אווירי', sea: 'ימי', other: 'אחר' }
-const SHIPPING_MODE_LABEL_EN: Record<ShippingMode, string> = { air: 'Air freight', sea: 'Sea freight', other: 'Other' }
 
 interface RfqDocCategoryDef {
   key: ShipmentDocCategory
   label: string
-  labelEn: string
 }
 const RFQ_DOC_CATEGORIES: RfqDocCategoryDef[] = [
-  { key: 'invoice', label: 'Commercial Invoice', labelEn: 'Commercial Invoice' },
-  { key: 'packing_list', label: 'Packing List', labelEn: 'Packing List' },
-  { key: 'msds_sds', label: 'MSDS / SDS', labelEn: 'MSDS / SDS' },
-  { key: 'other', label: 'מסמך נוסף', labelEn: 'Other document' },
+  { key: 'invoice', label: 'Commercial Invoice' },
+  { key: 'packing_list', label: 'Packing List' },
+  { key: 'msds_sds', label: 'MSDS / SDS' },
+  { key: 'other', label: 'מסמך נוסף' },
 ]
 
 interface LocalDoc {
@@ -129,37 +127,37 @@ function formatFileSize(bytes: number): string {
 }
 
 function buildSubject(form: FormState): string {
-  return `Request for Shipping Quotation – ${form.name.trim() || 'New Shipment'}`
+  return `בקשה להצעת מחיר למשלוח – ${form.name.trim() || 'משלוח חדש'}`
 }
 
 function buildBody(form: FormState, docs: LocalDoc[]): string {
   const lines = [
-    'Dear Sir/Madam,',
+    'שלום רב,',
     '',
-    'We would like to request a shipping quotation for the following cargo:',
+    'נבקש הצעת מחיר לשילוח המטען הבא:',
     '',
-    `Origin: ${[form.originCity, form.originCountry].filter(Boolean).join(', ') || '-'}`,
-    `Shipping mode: ${SHIPPING_MODE_LABEL_EN[form.shippingMode]}`,
-    `Ready date: ${form.readyDate || '-'}`,
+    `מוצא: ${[form.originCity, form.originCountry].filter(Boolean).join(', ') || '-'}`,
+    `סוג שילוח: ${SHIPPING_MODE_LABEL[form.shippingMode]}`,
+    `תאריך מוכנות לאיסוף: ${form.readyDate || '-'}`,
     '',
-    'Pickup details:',
-    `Company: ${form.supplierName || '-'}`,
-    `Address: ${form.pickupAddress || '-'}`,
-    `Contact: ${form.contactPerson || '-'}${form.contactEmail ? ` (${form.contactEmail})` : ''}${form.contactPhone ? `, ${form.contactPhone}` : ''}`,
+    'פרטי איסוף:',
+    `חברה: ${form.supplierName || '-'}`,
+    `כתובת: ${form.pickupAddress || '-'}`,
+    `איש קשר: ${form.contactPerson || '-'}${form.contactEmail ? ` (${form.contactEmail})` : ''}${form.contactPhone ? `, ${form.contactPhone}` : ''}`,
     '',
-    'Cargo:',
-    `Boxes: ${form.cartons || '-'}`,
-    `Weight: ${form.weight ? `${form.weight} kg` : '-'}`,
-    `Dimensions / Volume: ${form.dimensions || '-'}`,
-    `Pallets: ${form.onPallet ? form.palletCount || 'Yes' : 'No'}`,
-    `Goods type: ${form.goodsType || '-'}`,
-    `Dangerous Goods (DG): ${form.isDangerousGoods ? 'Yes' : 'No'}`,
+    'פרטי המטען:',
+    `מספר ארגזים: ${form.cartons || '-'}`,
+    `משקל: ${form.weight ? `${form.weight} ק"ג` : '-'}`,
+    `מידות / נפח: ${form.dimensions || '-'}`,
+    `משטחים (פלטות): ${form.onPallet ? form.palletCount || 'כן' : 'לא'}`,
+    `סוג הסחורה: ${form.goodsType || '-'}`,
+    `חומרים מסוכנים (DG): ${form.isDangerousGoods ? 'כן' : 'לא'}`,
     '',
-    `Attached documents: ${docs.length > 0 ? docs.map((d) => RFQ_DOC_CATEGORIES.find((c) => c.key === d.category)?.labelEn ?? d.category).join(', ') : 'none'}`,
+    `מסמכים מצורפים: ${docs.length > 0 ? docs.map((d) => RFQ_DOC_CATEGORIES.find((c) => c.key === d.category)?.label ?? d.category).join(', ') : 'אין'}`,
     '',
-    'Please send your quotation at your earliest convenience.',
+    'נשמח לקבל את הצעת המחיר בהקדם האפשרי.',
     '',
-    'Best regards,',
+    'בברכה,',
   ]
   return lines.join('\n')
 }
@@ -745,28 +743,28 @@ export default function NewShipmentRequestPage() {
 
         <div className="space-y-3">
           <div>
-            <label className={labelClass}>Subject</label>
+            <label className={labelClass}>נושא ההודעה</label>
             <input
               value={subject}
               onChange={(e) => {
                 setSubject(e.target.value)
                 setSubjectEdited(true)
               }}
-              dir="ltr"
-              className={`${inputClass} text-left`}
+              dir="auto"
+              className={inputClass}
             />
           </div>
           <div>
-            <label className={labelClass}>Body</label>
+            <label className={labelClass}>תוכן ההודעה</label>
             <textarea
               value={body}
               onChange={(e) => {
                 setBody(e.target.value)
                 setBodyEdited(true)
               }}
-              dir="ltr"
+              dir="auto"
               rows={14}
-              className={`${inputClass} text-left resize-none font-mono text-xs leading-relaxed`}
+              className={`${inputClass} resize-none text-sm leading-relaxed`}
             />
           </div>
         </div>
