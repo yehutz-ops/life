@@ -12,7 +12,10 @@ export default defineConfig(({ mode }) => {
     plugins: [
       react(),
       aiServerPlugin(env.ANTHROPIC_API_KEY ?? ''),
-      emailServerPlugin({ user: env.GMAIL_USER, appPassword: env.GMAIL_APP_PASSWORD }),
+      emailServerPlugin({
+        work: { user: env.GMAIL_WORK_USER, appPassword: env.GMAIL_WORK_APP_PASSWORD },
+        personal: { user: env.GMAIL_PERSONAL_USER, appPassword: env.GMAIL_PERSONAL_APP_PASSWORD },
+      }),
     ],
     server: {
       port: 5173,

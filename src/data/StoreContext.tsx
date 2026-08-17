@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useState, ReactNode } from 'react'
-import { Item, Project, InboxEntry } from './types'
+import { Item, Project, InboxEntry, InboxSource, EmailAccountId } from './types'
 import { Brand, BrandProduct, BrandCampaign, BrandContentItem, BrandPendingActivity, BrandMediaAsset, BrandContact, BrandDocument } from './brandTypes'
 import { Influencer, InfluencerProduct, InfluencerContent, InfluencerSale } from './influencerTypes'
 import { Campaign, CampaignCreative } from './campaignTypes'
@@ -53,7 +53,11 @@ interface StoreValue {
   addProject: (data: Omit<Project, 'id' | 'createdAt' | 'updatedAt'>) => Promise<Project>
   updateProject: (id: string, patch: Partial<Project>) => Promise<void>
   deleteProject: (id: string) => Promise<void>
-  addInboxEntry: (text: string, source: 'typed' | 'spoken') => Promise<void>
+  addInboxEntry: (
+    text: string,
+    source: InboxSource,
+    meta?: { emailAccount?: EmailAccountId; emailFrom?: string; emailSubject?: string },
+  ) => Promise<void>
   sortInboxEntry: (entryId: string, data: Omit<Item, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>
   deleteInboxEntry: (id: string) => Promise<void>
   addBrand: (data: Omit<Brand, 'id' | 'createdAt' | 'updatedAt' | 'lastImportedAt'>) => Promise<Brand>
@@ -311,8 +315,21 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  async function addInboxEntry(text: string, source: 'typed' | 'spoken') {
-    const entry: InboxEntry = { id: newId('inbox'), text, source, createdAt: nowISO(), status: 'pending' }
+  async function addInboxEntry(
+    text: string,
+    source: InboxSource,
+    meta?: { emailAccount?: EmailAccountId; emailFrom?: string; emailSubject?: string },
+  ) {
+    const entry: InboxEntry = {
+      id: newId('inbox'),
+      text,
+      source,
+      createdAt: nowISO(),
+      status: 'pending',
+      emailAccount: meta?.emailAccount,
+      emailFrom: meta?.emailFrom,
+      emailSubject: meta?.emailSubject,
+    }
     try {
       await repository.putInboxEntry(entry)
       setInboxEntries((prev) => [entry, ...prev])

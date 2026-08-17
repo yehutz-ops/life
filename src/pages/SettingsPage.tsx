@@ -11,6 +11,8 @@ import { checkAiHealth, testAiConnection } from '../ai/aiClient'
 import { getUsageStats, resetUsageStats, estimateCostUsd, AiUsageStats } from '../ai/usageTracking'
 import { getRoutingRules, deleteRoutingRule, RoutingRule } from '../ai/routingPreferences'
 import { getDomain } from '../data/domains'
+import { checkAccountsHealth, checkEmailAccount, EmailCheckError } from '../email/checkEmailAccount'
+import { EmailAccountId } from '../data/types'
 
 const options: { value: Theme; label: string; icon: string }[] = [
   { value: 'light', label: 'בהיר', icon: '☀️' },
@@ -31,7 +33,8 @@ const ERROR_TYPE_LABELS: Record<string, string> = {
 
 export default function SettingsPage() {
   const { theme, setTheme } = useTheme()
-  const { clearSampleData, reloadFromDisk } = useStore()
+  const store = useStore()
+  const { clearSampleData, reloadFromDisk } = store
   const confirm = useConfirm()
   const notify = useNotify()
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -43,13 +46,33 @@ export default function SettingsPage() {
   const [learningEnabled, setLearningEnabledLocal] = useState(getAiLearningEnabled())
   const [routingRules, setRoutingRules] = useState<RoutingRule[]>([])
 
+  const [emailHealth, setEmailHealth] = useState<Record<EmailAccountId, boolean>>({ work: false, personal: false })
+  const [emailChecking, setEmailChecking] = useState<EmailAccountId | null>(null)
+
   useEffect(() => {
     getUsageStats().then(setUsage)
     // בדיקה קלה בלבד בטעינת העמוד — לא מבצעת קריאה אמיתית ל-Claude ואין לה עלות.
     // אם יש מפתח, הסטטוס נשאר "unknown" (טרם נבדק בפועל) עד לחיצה על "בדיקת חיבור".
     checkAiHealth().then((hasKey) => setAiStatus(hasKey ? 'unknown' : 'not_configured'))
     loadRoutingRules()
+    checkAccountsHealth().then(setEmailHealth)
   }, [])
+
+  async function handleCheckEmailAccount(account: EmailAccountId) {
+    setEmailChecking(account)
+    try {
+      const summary = await checkEmailAccount(account, store)
+      if (summary.checked === 0) {
+        notify('אין מיילים חדשים.', 'info')
+      } else {
+        notify(`נבדקו ${summary.checked} מיילים חדשים: ${summary.autoFiled} נוספו אוטומטית, ${summary.sentToInbox} נשלחו לתיבת הכניסה למיון.`, 'success')
+      }
+    } catch (err: any) {
+      notify(err instanceof EmailCheckError ? err.message : 'הבדיקה נכשלה. אפשר לנסות שוב.', 'error')
+    } finally {
+      setEmailChecking(null)
+    }
+  }
 
   function loadRoutingRules() {
     getRoutingRules().then(setRoutingRules)
@@ -221,6 +244,32 @@ export default function SettingsPage() {
           <button onClick={handleResetUsage} className="px-3 py-1.5 rounded-xl border border-stone-200 dark:border-stone-700 text-xs text-stone-500 dark:text-stone-400">
             איפוס מונה מקומי
           </button>
+        </div>
+      </Card>
+
+      <Card>
+        <h2 className="text-base font-bold text-stone-900 dark:text-stone-100 mb-1">תיבות מייל מחוברות</h2>
+        <p className="text-sm text-stone-500 dark:text-stone-400 mb-4">
+          "בדוק מיילים חדשים" קורא רק מיילים חדשים מתיבת ה-INBOX (לא סורק היסטוריה), ומסווג אוטומטית: תחום ברור וודאי → נוסף כפריט; אחרת → נשלח לתיבת הכניסה למיון ידני.
+        </p>
+        <div className="space-y-3">
+          {(['work', 'personal'] as EmailAccountId[]).map((account) => (
+            <div key={account} className="flex items-center justify-between gap-3 flex-wrap border border-stone-100 dark:border-stone-800 rounded-xl px-3 py-2.5">
+              <div className="text-sm">
+                <div className="font-medium text-stone-800 dark:text-stone-100">{account === 'work' ? 'עבודה' : 'אישי'}</div>
+                <div className="text-xs text-stone-400 dark:text-stone-500">
+                  {emailHealth[account] ? '🟢 מחובר' : '⚪ עדיין לא הוגדר'}
+                </div>
+              </div>
+              <button
+                onClick={() => handleCheckEmailAccount(account)}
+                disabled={!emailHealth[account] || emailChecking === account}
+                className="px-3 py-1.5 rounded-xl border border-stone-200 dark:border-stone-700 text-xs font-medium text-stone-600 dark:text-stone-300 disabled:opacity-40"
+              >
+                {emailChecking === account ? 'בודק...' : 'בדוק מיילים חדשים'}
+              </button>
+            </div>
+          ))}
         </div>
       </Card>
 

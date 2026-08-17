@@ -6,7 +6,8 @@ export type Priority = 'low' | 'medium' | 'high'
 export type ItemStatus = 'open' | 'in_progress' | 'done' | 'cancelled' | 'waiting'
 export type ProjectStatus = 'in_progress' | 'done'
 export type Theme = 'light' | 'dark' | 'system'
-export type InboxSource = 'typed' | 'spoken'
+export type InboxSource = 'typed' | 'spoken' | 'email'
+export type EmailAccountId = 'work' | 'personal'
 export type InboxStatus = 'pending' | 'sorted' | 'deleted'
 export type ListType =
   | 'shopping'
@@ -85,4 +86,8 @@ export interface InboxEntry {
   createdAt: string
   status: InboxStatus
   sortedItemId?: string
+  // רלוונטי רק כש-source === 'email' — הקשר לתצוגה במסך המיון, לא משפיע על הלוגיקה עצמה.
+  emailAccount?: EmailAccountId
+  emailFrom?: string
+  emailSubject?: string
 }

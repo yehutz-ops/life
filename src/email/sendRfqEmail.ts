@@ -20,12 +20,13 @@ export interface RfqEmailResult {
   error?: { type: string; message: string }
 }
 
+// בודקת רק את תיבת ה-work — זו התיבה היחידה שממנה נשלח RFQ כרגע.
 export async function checkEmailHealth(): Promise<boolean> {
   try {
     const res = await fetch('/api/email/health')
     if (!res.ok) return false
     const data = await res.json()
-    return !!data.configured
+    return !!data.work?.configured
   } catch {
     return false
   }

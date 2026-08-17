@@ -153,4 +153,18 @@ export const repository = {
 
   isSeeded: () => getMeta('seeded'),
   markSeeded: () => setMeta('seeded', 'true'),
+
+  // מצב סנכרון מייל (UID אחרון שעובד) לכל תיבה — נשמר כ-JSON תחת מפתח ייעודי ב-meta, בלי צורך ב-store נפרד.
+  async getEmailSyncState(account: 'work' | 'personal'): Promise<{ uidValidity: number; lastUid: number } | undefined> {
+    const raw = await getMeta(`emailSync:${account}`)
+    if (!raw) return undefined
+    try {
+      return JSON.parse(raw)
+    } catch {
+      return undefined
+    }
+  },
+  setEmailSyncState(account: 'work' | 'personal', state: { uidValidity: number; lastUid: number }): Promise<void> {
+    return setMeta(`emailSync:${account}`, JSON.stringify(state))
+  },
 }

@@ -11,7 +11,7 @@ import { mapAiDraft } from '../ai/mapDraft'
 import { getAiEnabled, onAiEnabledChange } from '../ai/aiSettings'
 
 const HIGH_CONFIDENCE = 0.85
-const MEDIUM_CONFIDENCE = 0.65
+export const MEDIUM_CONFIDENCE = 0.65
 
 type AutoSaved = { itemId: string; tier: 'high' | 'medium'; domainLabel: string; domainIcon: string; destination?: string; needsApproval: boolean }
 

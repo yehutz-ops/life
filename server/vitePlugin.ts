@@ -2,7 +2,15 @@ import type { Plugin } from 'vite'
 import type { IncomingMessage, ServerResponse } from 'http'
 import { handleAiCommand, testConnection, classifyError } from './aiHandler'
 import { handleShipmentExtract } from './shipmentExtractHandler'
-import { checkEmailHealth, testEmailConnection, sendRfqEmails, classifyEmailError, EmailConfig } from './emailHandler'
+import {
+  checkEmailHealth,
+  testEmailConnection,
+  sendRfqEmails,
+  fetchNewEmails,
+  classifyEmailError,
+  EmailConfig,
+  EmailAccountId,
+} from './emailHandler'
 
 function readBody(req: IncomingMessage): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -86,8 +94,13 @@ export function aiServerPlugin(apiKey: string): Plugin {
   }
 }
 
-// שרת Gmail — מקביל בדיוק ל-aiServerPlugin, אך לדומיין שליחת מיילים (RFQ). מפתח נפרד לגמרי מ-Claude AI.
-export function emailServerPlugin(config: Partial<EmailConfig>): Plugin {
+// שרת Gmail — מקביל בדיוק ל-aiServerPlugin, אך לדומיין המייל (RFQ + קריאת תיבות נכנסות). מפתח נפרד לגמרי מ-Claude AI.
+// שתי תיבות מחוברות: 'work' (שליחת RFQ + קריאה) ו-'personal' (קריאה בלבד כרגע — אין עדיין תכונת שליחה מהתיבה האישית).
+export function emailServerPlugin(accounts: Record<EmailAccountId, Partial<EmailConfig>>): Plugin {
+  function accountConfig(id: EmailAccountId): Partial<EmailConfig> {
+    return accounts[id] ?? {}
+  }
+
   return {
     name: 'life-control-center-email-server',
     configureServer(server) {
@@ -95,11 +108,14 @@ export function emailServerPlugin(config: Partial<EmailConfig>): Plugin {
         if (!req.url) return next()
 
         if (req.url === '/api/email/health' && req.method === 'GET') {
-          sendJson(res, 200, checkEmailHealth(config))
+          sendJson(res, 200, { work: checkEmailHealth(accountConfig('work')), personal: checkEmailHealth(accountConfig('personal')) })
           return
         }
 
         if (req.url === '/api/email/test-connection' && req.method === 'POST') {
+          const raw = await readBody(req)
+          const body = raw ? JSON.parse(raw) : {}
+          const config = accountConfig((body.account as EmailAccountId) ?? 'work')
           if (!config.user || !config.appPassword) {
             sendJson(res, 200, { ok: false, error: { type: 'no_key', message: 'חיבור תיבת המייל עדיין לא הוגדר.' } })
             return
@@ -110,6 +126,8 @@ export function emailServerPlugin(config: Partial<EmailConfig>): Plugin {
         }
 
         if (req.url === '/api/email/send-rfq' && req.method === 'POST') {
+          // שליחת RFQ נשארת מחוברת רק לתיבת ה-work — אין עדיין תכונת שליחה מהתיבה האישית.
+          const config = accountConfig('work')
           if (!config.user || !config.appPassword) {
             sendJson(res, 400, { error: 'no_key', message: 'חיבור תיבת המייל עדיין לא הוגדר.' })
             return
@@ -121,6 +139,26 @@ export function emailServerPlugin(config: Partial<EmailConfig>): Plugin {
             sendJson(res, 200, { results })
           } catch (err: any) {
             console.error('[email/send-rfq] failed:', err?.message ?? err)
+            const classified = classifyEmailError(err)
+            sendJson(res, 502, { error: classified.type, message: classified.message })
+          }
+          return
+        }
+
+        if (req.url === '/api/email/fetch-new' && req.method === 'POST') {
+          try {
+            const raw = await readBody(req)
+            const body = JSON.parse(raw)
+            const accountId = (body.account as EmailAccountId) ?? 'work'
+            const config = accountConfig(accountId)
+            if (!config.user || !config.appPassword) {
+              sendJson(res, 400, { error: 'no_key', message: 'חיבור תיבת המייל עדיין לא הוגדר.' })
+              return
+            }
+            const result = await fetchNewEmails(config as EmailConfig, body.syncState)
+            sendJson(res, 200, result)
+          } catch (err: any) {
+            console.error('[email/fetch-new] failed:', err?.message ?? err)
             const classified = classifyEmailError(err)
             sendJson(res, 502, { error: classified.type, message: classified.message })
           }

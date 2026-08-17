@@ -1,6 +1,9 @@
 import nodemailer from 'nodemailer'
+import { ImapFlow } from 'imapflow'
+import { simpleParser } from 'mailparser'
 
 export type EmailErrorType = 'auth' | 'invalid_recipient' | 'network' | 'server' | 'unknown'
+export type EmailAccountId = 'work' | 'personal'
 
 export interface ClassifiedEmailError {
   type: EmailErrorType
@@ -8,22 +11,23 @@ export interface ClassifiedEmailError {
 }
 
 // מסווג שגיאה לקטגוריה בטוחה להצגה למשתמש — אף פעם לא כולל את ה-App Password או פרטים טכניים גולמיים.
+// משמש גם לשגיאות SMTP (שליחה) וגם ל-IMAP (קריאה) — שני הפרוטוקולים משתמשים באותו App Password.
 export function classifyEmailError(err: unknown): ClassifiedEmailError {
   const code = (err as any)?.responseCode ?? (err as any)?.code
   const raw = String((err as any)?.message ?? err ?? '')
-  if (code === 535 || /invalid login|username and password not accepted/i.test(raw)) {
+  if (code === 535 || /invalid login|username and password not accepted|invalid credentials|authentication failed/i.test(raw)) {
     return { type: 'auth', message: 'ההתחברות ל-Gmail נכשלה — כדאי לבדוק שה-App Password נכון ועדיין פעיל.' }
   }
   if (code === 550 || /no such user|recipient address rejected|invalid recipient/i.test(raw)) {
     return { type: 'invalid_recipient', message: 'כתובת הנמען לא תקינה או נדחתה על ידי השרת.' }
   }
-  if (/ENOTFOUND|ECONNREFUSED|ETIMEDOUT|ECONNRESET/.test(raw)) {
+  if (/ENOTFOUND|ECONNREFUSED|ETIMEDOUT|ECONNRESET|timeout/i.test(raw)) {
     return { type: 'network', message: 'אין חיבור לשרתי Gmail כרגע. בדוק את החיבור לאינטרנט ונסה שוב.' }
   }
   if (raw) {
     return { type: 'server', message: 'שירות המייל החזיר שגיאה זמנית. אפשר לנסות שוב עוד רגע.' }
   }
-  return { type: 'unknown', message: 'קרתה תקלה לא צפויה בזמן השליחה. אפשר לנסות שוב.' }
+  return { type: 'unknown', message: 'קרתה תקלה לא צפויה. אפשר לנסות שוב.' }
 }
 
 export interface EmailConfig {
@@ -102,4 +106,77 @@ export async function sendRfqEmails(config: EmailConfig, req: SendRfqEmailsReque
     }
   }
   return results
+}
+
+export interface EmailSyncState {
+  uidValidity: number
+  lastUid: number
+}
+
+export interface ParsedIncomingEmail {
+  uid: number
+  from: string
+  subject: string
+  date: string
+  text: string
+}
+
+export interface FetchNewEmailsResult {
+  syncState: EmailSyncState
+  messages: ParsedIncomingEmail[]
+}
+
+const MAX_MESSAGES_PER_CHECK = 20
+const MAX_BODY_CHARS = 20000
+
+// קורא מיילים חדשים בלבד מ-INBOX דרך IMAP (אותו App Password כמו השליחה). לא נוגע בתיקיות/תוויות אחרות.
+// חיבור ראשון לחשבון (או שינוי UIDVALIDITY, נדיר בג'ימייל) — לא מעבד היסטוריה, רק קובע קו בסיס חדש ומחזיר 0 הודעות.
+// זו החלטה מכוונת: חיבור תיבת מייל לא סורק רטרואקטיבית מיילים ישנים (רלוונטי במיוחד לתיבה האישית עם תוכן רפואי).
+export async function fetchNewEmails(config: EmailConfig, syncState?: EmailSyncState): Promise<FetchNewEmailsResult> {
+  const client = new ImapFlow({
+    host: 'imap.gmail.com',
+    port: 993,
+    secure: true,
+    auth: { user: config.user, pass: config.appPassword },
+    logger: false,
+  })
+
+  await client.connect()
+  try {
+    const lock = await client.getMailboxLock('INBOX')
+    try {
+      const mailbox = client.mailbox as any
+      const uidValidity = Number(mailbox.uidValidity)
+
+      if (!syncState || syncState.uidValidity !== uidValidity) {
+        const uidNext = Number(mailbox.uidNext)
+        const baselineUid = Number.isFinite(uidNext) ? Math.max(uidNext - 1, 0) : 0
+        return { syncState: { uidValidity, lastUid: baselineUid }, messages: [] }
+      }
+
+      const messages: ParsedIncomingEmail[] = []
+      let lastUid = syncState.lastUid
+      let count = 0
+      for await (const msg of client.fetch(`${syncState.lastUid + 1}:*`, { uid: true, source: true }, { uid: true })) {
+        if (msg.uid <= syncState.lastUid) continue // '*' עלול להחזיר גם את ההודעה האחרונה הקיימת גם כשאין חדשות
+        if (count >= MAX_MESSAGES_PER_CHECK) break
+        const parsed = await simpleParser(msg.source as Buffer)
+        messages.push({
+          uid: msg.uid,
+          from: parsed.from?.text ?? '',
+          subject: parsed.subject ?? '',
+          date: (parsed.date ?? new Date()).toISOString(),
+          text: (parsed.text ?? '').slice(0, MAX_BODY_CHARS),
+        })
+        lastUid = msg.uid
+        count++
+      }
+
+      return { syncState: { uidValidity, lastUid }, messages }
+    } finally {
+      lock.release()
+    }
+  } finally {
+    await client.logout()
+  }
 }

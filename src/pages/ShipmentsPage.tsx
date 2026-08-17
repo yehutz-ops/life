@@ -7,6 +7,7 @@ import StatusPill, { PillTone } from '../components/hub/StatusPill'
 import QuickAddPopover from '../components/hub/QuickAddPopover'
 import { useNotify } from '../data/NotificationContext'
 import { ShipmentStatus } from '../data/shipmentTypes'
+import { checkEmailAccount, EmailCheckError } from '../email/checkEmailAccount'
 
 const STATUS_LABEL: Record<ShipmentStatus, string> = {
   preparing: 'בהכנה',
@@ -46,9 +47,11 @@ const NEXT_ACTION: Record<ShipmentStatus, string> = {
 }
 
 export default function ShipmentsPage() {
-  const { shipments, brands, addForwarder, reloadFromDisk } = useStore()
+  const store = useStore()
+  const { shipments, brands, addForwarder, reloadFromDisk } = store
   const notify = useNotify()
   const [addForwarderOpen, setAddForwarderOpen] = useState(false)
+  const [checkingEmail, setCheckingEmail] = useState(false)
 
   const kpis = useMemo(() => {
     const active = shipments.filter((s) => s.status !== 'delivered').length
@@ -66,8 +69,20 @@ export default function ShipmentsPage() {
     setAddForwarderOpen(false)
   }
 
-  function checkEmailUpdates() {
-    notify('חיבור לתיבת המייל עדיין לא הוגדר — הפעולה תהיה זמינה כשתחובר Email integration.', 'info')
+  async function checkEmailUpdates() {
+    setCheckingEmail(true)
+    try {
+      const summary = await checkEmailAccount('work', store)
+      if (summary.checked === 0) {
+        notify('אין מיילים חדשים בתיבת העבודה.', 'info')
+      } else {
+        notify(`נבדקו ${summary.checked} מיילים חדשים: ${summary.autoFiled} נוספו אוטומטית, ${summary.sentToInbox} נשלחו לתיבת הכניסה למיון.`, 'success')
+      }
+    } catch (err: any) {
+      notify(err instanceof EmailCheckError ? err.message : 'הבדיקה נכשלה. אפשר לנסות שוב מהגדרות.', 'error')
+    } finally {
+      setCheckingEmail(false)
+    }
   }
 
   async function refreshStatuses() {
@@ -97,8 +112,12 @@ export default function ShipmentsPage() {
           </div>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          <button onClick={checkEmailUpdates} className="px-3.5 py-2 rounded-xl border border-stone-200 dark:border-stone-700 text-xs font-medium text-stone-500 dark:text-stone-400 hover:bg-stone-50 dark:hover:bg-stone-800">
-            בדוק עדכונים במייל
+          <button
+            onClick={checkEmailUpdates}
+            disabled={checkingEmail}
+            className="px-3.5 py-2 rounded-xl border border-stone-200 dark:border-stone-700 text-xs font-medium text-stone-500 dark:text-stone-400 hover:bg-stone-50 dark:hover:bg-stone-800 disabled:opacity-50"
+          >
+            {checkingEmail ? 'בודק...' : 'בדוק עדכונים במייל'}
           </button>
           <button onClick={refreshStatuses} className="px-3.5 py-2 rounded-xl border border-stone-200 dark:border-stone-700 text-xs font-medium text-stone-500 dark:text-stone-400 hover:bg-stone-50 dark:hover:bg-stone-800">
             רענון סטטוסים

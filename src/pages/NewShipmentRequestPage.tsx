@@ -1,5 +1,7 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
+import { PDFViewer, PDFDownloadLink } from '@react-pdf/renderer'
+import { RfqPdfDocument, RfqPdfData, RfqPdfDocumentFile } from '../pdf/RfqPdfDocument'
 import { useStore } from '../data/StoreContext'
 import { useNotify } from '../data/NotificationContext'
 import { useConfirm } from '../data/ConfirmContext'
@@ -25,6 +27,18 @@ const RFQ_DOC_CATEGORIES: RfqDocCategoryDef[] = [
   { key: 'msds_sds', label: 'MSDS / SDS' },
   { key: 'other', label: 'מסמך נוסף' },
 ]
+
+// תוויות באנגלית עבור ה-PDF (מסמך בינלאומי) — נפרד מ-RFQ_DOC_CATEGORIES.label שמוצג בעברית ב-UI.
+// כולל את כל ה-ShipmentDocCategory לצורך שלמות הטיפוס, גם אם ב-RFQ עצמו רק 4 הקטגוריות ב-RFQ_DOC_CATEGORIES בשימוש בפועל.
+const PDF_DOC_CATEGORY_LABEL: Record<ShipmentDocCategory, string> = {
+  invoice: 'Commercial Invoice',
+  packing_list: 'Packing List',
+  msds_sds: 'MSDS / SDS',
+  awb: 'AWB',
+  dangerous_goods: 'Dangerous Goods Declaration',
+  customs: 'Customs document',
+  other: 'Other document',
+}
 
 interface LocalDoc {
   id: string
@@ -200,11 +214,38 @@ export default function NewShipmentRequestPage() {
   const [aiHealthy, setAiHealthy] = useState<boolean | null>(null)
   const [emailHealthy, setEmailHealthy] = useState<boolean | null>(null)
   const [sending, setSending] = useState(false)
+  const [showPdfPreview, setShowPdfPreview] = useState(false)
 
   useEffect(() => {
     checkAiHealth().then(setAiHealthy)
     checkEmailHealth().then(setEmailHealthy)
   }, [])
+
+  const pdfData: RfqPdfData = useMemo(
+    () => ({
+      name: form.name,
+      originCountry: form.originCountry,
+      originCity: form.originCity,
+      readyDate: form.readyDate,
+      supplierName: form.supplierName,
+      pickupAddress: form.pickupAddress,
+      contactPerson: form.contactPerson,
+      contactEmail: form.contactEmail,
+      contactPhone: form.contactPhone,
+      cartons: form.cartons,
+      weight: form.weight,
+      dimensions: form.dimensions,
+      onPallet: form.onPallet,
+      palletCount: form.palletCount,
+      goodsType: form.goodsType,
+      isDangerousGoods: form.isDangerousGoods,
+    }),
+    [form],
+  )
+  const pdfDocuments: RfqPdfDocumentFile[] = useMemo(
+    () => docs.map((d) => ({ category: PDF_DOC_CATEGORY_LABEL[d.category], fileName: d.file.name })),
+    [docs],
+  )
 
   const [selectionMode, setSelectionMode] = useState<'all-active' | 'manual'>('all-active')
   const [manualSelectedIds, setManualSelectedIds] = useState<string[]>([])
@@ -738,6 +779,41 @@ export default function NewShipmentRequestPage() {
             )
           })}
         </div>
+      </Card>
+
+      {/* מסמך RFQ כ-PDF — המסמך שיישלח בפועל לכל סוכנות */}
+      <Card>
+        <h2 className="text-sm font-bold text-stone-800 dark:text-stone-100 mb-1">מסמך בקשת הצעת מחיר (PDF)</h2>
+        <p className="text-xs text-stone-400 dark:text-stone-500 mb-4">
+          זהו המסמך המרכזי שיישלח לכל סוכנות. התצוגה מתעדכנת אוטומטית עם כל שינוי בשדות למעלה — אין צורך ליצור מחדש ידנית.
+        </p>
+
+        {!showPdfPreview ? (
+          <button
+            type="button"
+            onClick={() => setShowPdfPreview(true)}
+            className="px-4 py-2.5 rounded-xl bg-amber-800 text-white text-sm font-medium hover:bg-amber-900"
+          >
+            📄 צור PDF לתצוגה מקדימה
+          </button>
+        ) : (
+          <>
+            <div className="rounded-xl overflow-hidden border border-stone-200 dark:border-stone-700" style={{ height: 600 }}>
+              <PDFViewer width="100%" height="100%" showToolbar={false} style={{ border: 'none' }}>
+                <RfqPdfDocument data={pdfData} documents={pdfDocuments} />
+              </PDFViewer>
+            </div>
+            <div className="mt-3">
+              <PDFDownloadLink
+                document={<RfqPdfDocument data={pdfData} documents={pdfDocuments} />}
+                fileName={`RFQ-${form.name.trim() || 'shipment'}.pdf`}
+                className="inline-block px-4 py-2.5 rounded-xl border border-stone-200 dark:border-stone-700 text-sm font-medium text-stone-600 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-800"
+              >
+                {({ loading }) => (loading ? 'מכין PDF...' : '⬇ הורד PDF')}
+              </PDFDownloadLink>
+            </div>
+          </>
+        )}
       </Card>
 
       {/* 5. סוכנויות לקבלת הצעת מחיר */}

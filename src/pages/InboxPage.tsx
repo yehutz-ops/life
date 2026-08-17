@@ -3,7 +3,8 @@ import { useDetailModal } from '../data/DetailModalContext'
 import { useConfirm } from '../data/ConfirmContext'
 import { Card } from '../components/ui'
 
-const sourceLabel = { typed: '⌨️ הוקלד', spoken: '🎤 הוקלט' } as const
+const sourceLabel = { typed: '⌨️ הוקלד', spoken: '🎤 הוקלט', email: '📧 מייל' } as const
+const emailAccountLabel = { work: 'עבודה', personal: 'אישי' } as const
 
 export default function InboxPage() {
   const { inboxEntries, deleteInboxEntry } = useStore()
@@ -35,8 +36,15 @@ export default function InboxPage() {
         {pending.map((entry) => (
           <Card key={entry.id} className="flex items-center justify-between gap-4 flex-wrap">
             <div>
+              {entry.source === 'email' && entry.emailSubject && (
+                <div className="text-xs font-bold text-stone-500 dark:text-stone-400 mb-0.5">{entry.emailSubject}</div>
+              )}
               <div className="text-sm font-medium text-stone-800 dark:text-stone-100">{entry.text}</div>
-              <div className="text-xs text-stone-400 dark:text-stone-500 mt-1">{sourceLabel[entry.source]}</div>
+              <div className="text-xs text-stone-400 dark:text-stone-500 mt-1">
+                {sourceLabel[entry.source]}
+                {entry.source === 'email' && entry.emailAccount && ` · ${emailAccountLabel[entry.emailAccount]}`}
+                {entry.source === 'email' && entry.emailFrom && ` · מאת: ${entry.emailFrom}`}
+              </div>
             </div>
             <div className="flex gap-2">
               <button

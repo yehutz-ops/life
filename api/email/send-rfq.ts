@@ -7,8 +7,9 @@ export default async function handler(req: any, res: any) {
     res.status(405).json({ error: 'method_not_allowed' })
     return
   }
-  const user = process.env.GMAIL_USER
-  const appPassword = process.env.GMAIL_APP_PASSWORD
+  // שליחת RFQ נשארת מחוברת רק לתיבת ה-work — אין עדיין תכונת שליחה מהתיבה האישית.
+  const user = process.env.GMAIL_WORK_USER
+  const appPassword = process.env.GMAIL_WORK_APP_PASSWORD
   if (!user || !appPassword) {
     res.status(400).json({ error: 'no_key', message: 'חיבור תיבת המייל עדיין לא הוגדר.' })
     return

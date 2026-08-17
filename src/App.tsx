@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import Layout from './components/Layout'
 import Home from './pages/Home'
@@ -14,7 +15,8 @@ import CampaignsPage from './pages/CampaignsPage'
 import CampaignDetailPage from './pages/CampaignDetailPage'
 import ShipmentsPage from './pages/ShipmentsPage'
 import ShipmentDetailPage from './pages/ShipmentDetailPage'
-import NewShipmentRequestPage from './pages/NewShipmentRequestPage'
+// טעינה עצלה — הדף היחיד שמייבא @react-pdf/renderer, ספרייה כבדה; לא צריך לנפח את ה-bundle הראשי בשביל דף אחד.
+const NewShipmentRequestPage = lazy(() => import('./pages/NewShipmentRequestPage'))
 import HouseholdPage from './pages/HouseholdPage'
 import PersonalPage from './pages/PersonalPage'
 import FinancePage from './pages/FinancePage'
@@ -67,7 +69,14 @@ export default function App() {
                         <Route path="work/campaigns" element={<CampaignsPage />} />
                         <Route path="work/campaigns/:campaignId" element={<CampaignDetailPage />} />
                         <Route path="work/shipments" element={<ShipmentsPage />} />
-                        <Route path="work/shipments/new" element={<NewShipmentRequestPage />} />
+                        <Route
+                          path="work/shipments/new"
+                          element={
+                            <Suspense fallback={<div className="p-6 text-sm text-stone-400 dark:text-stone-500">טוען...</div>}>
+                              <NewShipmentRequestPage />
+                            </Suspense>
+                          }
+                        />
                         <Route path="work/shipments/:shipmentId" element={<ShipmentDetailPage />} />
                         <Route path="work/ideas" element={<IdeaBankPage />} />
                         <Route path="work/scripts" element={<VideoScriptsPage />} />
