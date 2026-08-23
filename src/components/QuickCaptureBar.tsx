@@ -183,8 +183,9 @@ export default function QuickCaptureBar() {
           onKeyDown={(e) => {
             if (e.key === 'Enter') {
               e.preventDefault()
-              // Enter שומר פריט חדש רק במצב AI — לעולם לא יוצר פריט חדש בטעות בזמן חיפוש רגיל.
-              if (aiActive) runAi()
+              // Enter תמיד שולח: דרך ה-AI (סיווג וצירוף אוטומטי) כשהוא מופעל, אחרת הוספה רגילה לתיבת הכניסה.
+              if (aiEnabled) triggerAi()
+              else handleAdd()
             }
           }}
           placeholder="כתוב או אמור משהו שצריך לזכור..."
