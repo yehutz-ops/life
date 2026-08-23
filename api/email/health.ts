@@ -1,4 +1,4 @@
-import { checkEmailHealth } from '../../server/emailHandler'
+import { checkEmailHealth } from '../../server/emailHandler.js'
 
 // Vercel serverless function — production equivalent of the /api/email/health route
 // that server/vitePlugin.ts serves during local dev. Reports status for both accounts.

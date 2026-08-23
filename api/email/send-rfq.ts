@@ -1,4 +1,4 @@
-import { sendRfqEmails, classifyEmailError } from '../../server/emailHandler'
+import { sendRfqEmails, classifyEmailError } from '../../server/emailHandler.js'
 
 // Vercel serverless function — production equivalent of the /api/email/send-rfq
 // route in server/vitePlugin.ts.

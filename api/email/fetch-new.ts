@@ -1,4 +1,4 @@
-import { fetchNewEmails, classifyEmailError, EmailAccountId } from '../../server/emailHandler'
+import { fetchNewEmails, classifyEmailError, EmailAccountId } from '../../server/emailHandler.js'
 
 const ACCOUNT_ENV: Record<EmailAccountId, { user?: string; appPassword?: string }> = {
   work: { user: process.env.GMAIL_WORK_USER, appPassword: process.env.GMAIL_WORK_APP_PASSWORD },
