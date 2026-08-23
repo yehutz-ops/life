@@ -584,7 +584,7 @@ export default function NewShipmentRequestPage() {
             <input value={form.name} onChange={(e) => set('name', e.target.value)} placeholder="לדוגמה: משלוח בשמים — ספטמבר" dir="auto" className={inputClass} />
             <FieldHint meta={fieldMeta.name} onPick={(v, s) => applyFieldValue('name', v, s)} />
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className={labelClass}>מדינת מוצא</label>
               <input value={form.originCountry} onChange={(e) => set('originCountry', e.target.value)} dir="auto" className={inputClass} />
@@ -596,7 +596,7 @@ export default function NewShipmentRequestPage() {
               <FieldHint meta={fieldMeta.originCity} onPick={(v, s) => applyFieldValue('originCity', v, s)} />
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className={labelClass}>סוג שילוח</label>
               <select value={form.shippingMode} onChange={(e) => set('shippingMode', e.target.value as ShippingMode)} className={inputClass}>
@@ -618,7 +618,7 @@ export default function NewShipmentRequestPage() {
       <Card>
         <h2 className="text-sm font-bold text-stone-800 dark:text-stone-100 mb-4">פרטי המטען</h2>
         <div className="space-y-3">
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className={labelClass}>מספר ארגזים</label>
               <input type="number" value={form.cartons} onChange={(e) => set('cartons', e.target.value)} className={inputClass} />
@@ -683,7 +683,7 @@ export default function NewShipmentRequestPage() {
             <input value={form.pickupAddress} onChange={(e) => set('pickupAddress', e.target.value)} dir="auto" className={inputClass} />
             <FieldHint meta={fieldMeta.pickupAddress} onPick={(v, s) => applyFieldValue('pickupAddress', v, s)} />
           </div>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
               <label className={labelClass}>איש קשר</label>
               <input value={form.contactPerson} onChange={(e) => set('contactPerson', e.target.value)} dir="auto" className={inputClass} />
@@ -775,7 +775,7 @@ export default function NewShipmentRequestPage() {
           </button>
         ) : (
           <>
-            <div className="rounded-xl overflow-hidden border border-stone-200 dark:border-stone-700" style={{ height: 600 }}>
+            <div className="rounded-xl overflow-hidden border border-stone-200 dark:border-stone-700 h-[400px] sm:h-[600px]">
               <PDFViewer width="100%" height="100%" showToolbar={false} style={{ border: 'none' }}>
                 <RfqPdfDocument data={pdfData} documents={pdfDocuments} />
               </PDFViewer>

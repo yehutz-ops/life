@@ -1,13 +1,5 @@
 import { NavLink } from 'react-router-dom'
-
-const coreLinks = [
-  { to: '/', label: 'בית', icon: '🏠', end: true },
-  { to: '/calendar', label: 'יומן', icon: '🗓️', end: false },
-  { to: '/tasks', label: 'משימות', icon: '✅', end: false },
-  { to: '/projects', label: 'פרויקטים', icon: '📁', end: false },
-  { to: '/search', label: 'חיפוש', icon: '🔍', end: false },
-  { to: '/settings', label: 'הגדרות', icon: '⚙️', end: false },
-]
+import { coreLinks } from './navLinks'
 
 export default function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => void }) {
   const linkClass = ({ isActive }: { isActive: boolean }) =>
@@ -19,7 +11,7 @@ export default function Sidebar({ collapsed, onToggle }: { collapsed: boolean; o
 
   return (
     <aside
-      className={`shrink-0 border-l border-stone-100 dark:border-stone-800 bg-white/80 dark:bg-stone-900 backdrop-blur-sm min-h-screen p-4 flex flex-col transition-all ${
+      className={`hidden md:flex md:flex-col shrink-0 border-l border-stone-100 dark:border-stone-800 bg-white/80 dark:bg-stone-900 backdrop-blur-sm min-h-screen p-4 transition-all ${
         collapsed ? 'w-20' : 'w-64'
       }`}
     >

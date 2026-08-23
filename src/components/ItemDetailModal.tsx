@@ -156,7 +156,7 @@ export default function ItemDetailModal() {
           className="w-full border border-stone-200 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100 rounded-xl p-2 text-sm mb-3"
         />
 
-        <div className="grid grid-cols-2 gap-3 mb-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
           <div>
             <label className="text-xs text-stone-500 dark:text-stone-400 block mb-1">תחום חיים</label>
             <select
@@ -238,7 +238,7 @@ export default function ItemDetailModal() {
           </select>
         </div>
 
-        <div className="grid grid-cols-3 gap-3 mb-3">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
           <div>
             <label className="text-xs text-stone-500 dark:text-stone-400 block mb-1">תאריך</label>
             <input

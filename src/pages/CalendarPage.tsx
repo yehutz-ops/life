@@ -101,7 +101,7 @@ export default function CalendarPage() {
               <button
                 key={iso}
                 onClick={() => setSelectedDate(iso)}
-                className={`aspect-square rounded-xl p-1.5 text-right flex flex-col items-start gap-1 border transition-colors ${
+                className={`aspect-square rounded-xl p-1 sm:p-1.5 text-right flex flex-col items-start gap-1 border transition-colors ${
                   isSelected ? 'border-amber-400 bg-amber-50 dark:bg-amber-950/50' : 'border-transparent hover:bg-stone-50 dark:hover:bg-stone-800'
                 } ${!inMonth ? 'opacity-30' : ''}`}
               >

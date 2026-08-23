@@ -222,7 +222,7 @@ export default function BrandImportPage() {
         <Card>
           <h2 className="text-base font-bold text-stone-900 dark:text-stone-100 mb-1">הייבוא הושלם — {report.brandName}</h2>
           <p className="text-xs text-stone-400 dark:text-stone-500 mb-4">{report.backupCreated ? 'קובץ גיבוי הורד לפני הכתיבה.' : ''}</p>
-          <div className="grid grid-cols-4 gap-2 text-sm mb-4">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-sm mb-4">
             <div className="bg-stone-50 dark:bg-stone-800 rounded-xl p-3 text-center">
               <div className="font-bold text-emerald-700 dark:text-emerald-400">{Object.values(report.added).reduce((a, b) => a + b, 0)}</div>
               <div className="text-xs text-stone-400 dark:text-stone-500">נוספו</div>
