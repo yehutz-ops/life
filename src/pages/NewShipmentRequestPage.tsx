@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { PDFViewer, PDFDownloadLink } from '@react-pdf/renderer'
+import { PDFViewer, PDFDownloadLink, pdf } from '@react-pdf/renderer'
 import { RfqPdfDocument, RfqPdfData, RfqPdfDocumentFile } from '../pdf/RfqPdfDocument'
 import { useStore } from '../data/StoreContext'
 import { useNotify } from '../data/NotificationContext'
@@ -54,7 +54,7 @@ const EXTRACT_STRING_KEYS = [
 ] as const
 const EXTRACT_BOOL_KEYS = ['onPallet', 'isDangerousGoods'] as const
 
-function fileToBase64(file: File): Promise<string> {
+function fileToBase64(file: Blob): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
     reader.onload = () => resolve((reader.result as string).split(',')[1] ?? '')
@@ -146,36 +146,9 @@ function buildSubject(form: FormState): string {
   return `בקשה להצעת מחיר למשלוח – ${form.name.trim() || 'משלוח חדש'}`
 }
 
-function buildBody(form: FormState, docs: LocalDoc[]): string {
-  const lines = [
-    'שלום רב,',
-    '',
-    'נבקש הצעת מחיר לשילוח המטען הבא:',
-    '',
-    `מוצא: ${[form.originCity, form.originCountry].filter(Boolean).join(', ') || '-'}`,
-    `סוג שילוח: ${SHIPPING_MODE_LABEL[form.shippingMode]}`,
-    `תאריך מוכנות לאיסוף: ${form.readyDate || '-'}`,
-    '',
-    'פרטי איסוף:',
-    `חברה: ${form.supplierName || '-'}`,
-    `כתובת: ${form.pickupAddress || '-'}`,
-    `איש קשר: ${form.contactPerson || '-'}${form.contactEmail ? ` (${form.contactEmail})` : ''}${form.contactPhone ? `, ${form.contactPhone}` : ''}`,
-    '',
-    'פרטי המטען:',
-    `מספר ארגזים: ${form.cartons || '-'}`,
-    `משקל: ${form.weight ? `${form.weight} ק"ג` : '-'}`,
-    `מידות / נפח: ${form.dimensions || '-'}`,
-    `משטחים (פלטות): ${form.onPallet ? form.palletCount || 'כן' : 'לא'}`,
-    `סוג הסחורה: ${form.goodsType || '-'}`,
-    `חומרים מסוכנים (DG): ${form.isDangerousGoods ? 'כן' : 'לא'}`,
-    '',
-    `מסמכים מצורפים: ${docs.length > 0 ? docs.map((d) => RFQ_DOC_CATEGORIES.find((c) => c.key === d.category)?.label ?? d.category).join(', ') : 'אין'}`,
-    '',
-    'נשמח לקבל את הצעת המחיר בהקדם האפשרי.',
-    '',
-    'בברכה,',
-  ]
-  return lines.join('\n')
+// גוף המייל נשאר קצר וקבוע — כל פרטי המשלוח מופיעים רק ב-PDF המצורף (RfqPdfDocument), לא בגוף ההודעה.
+function buildBody(_form: FormState, _docs: LocalDoc[]): string {
+  return ['שלום,', 'מצורפת בקשה להצעת מחיר עבור משלוח חדש.', 'נשמח לקבל את הצעתכם בהקדם האפשרי.', 'תודה רבה.'].join('\n')
 }
 
 const AGENCY_FIELDS: QuickAddField[] = [
@@ -458,7 +431,11 @@ export default function NewShipmentRequestPage() {
     try {
       const agenciesWithEmail = selectedForwarders.filter((f): f is Forwarder & { email: string } => !!f.email)
       const skippedNoEmail = selectedForwarders.length - agenciesWithEmail.length
-      const attachments = await Promise.all(docs.map(async (d) => ({ fileName: d.file.name, mediaType: d.file.type, base64: await fileToBase64(d.file) })))
+      // ה-PDF (RfqPdfDocument) הוא המסמך שנושא את כל פרטי המשלוח — גוף המייל עצמו נשאר קצר וקבוע.
+      const pdfBlob = await pdf(<RfqPdfDocument data={pdfData} documents={pdfDocuments} />).toBlob()
+      const pdfAttachment = { fileName: `RFQ-${form.name.trim() || 'shipment'}.pdf`, mediaType: 'application/pdf', base64: await fileToBase64(pdfBlob) }
+      const docAttachments = await Promise.all(docs.map(async (d) => ({ fileName: d.file.name, mediaType: d.file.type, base64: await fileToBase64(d.file) })))
+      const attachments = [pdfAttachment, ...docAttachments]
 
       const results: RfqEmailResult[] = agenciesWithEmail.length
         ? await sendRfqEmails(
@@ -911,7 +888,7 @@ export default function NewShipmentRequestPage() {
                 setBody(e.target.value)
                 setBodyEdited(true)
               }}
-              dir="auto"
+              dir="rtl"
               rows={14}
               className={`${inputClass} resize-none text-sm leading-relaxed`}
             />
