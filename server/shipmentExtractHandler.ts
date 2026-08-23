@@ -1,5 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk'
-import { SHIPMENT_EXTRACT_SCHEMA, SHIPMENT_EXTRACT_FIELD_KEYS } from './shipmentExtractSchema'
+import { SHIPMENT_EXTRACT_SCHEMA, SHIPMENT_EXTRACT_FIELD_KEYS } from './shipmentExtractSchema.js'
 
 const MODEL = 'claude-haiku-4-5'
 

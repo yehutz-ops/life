@@ -1,4 +1,4 @@
-import { testConnection } from '../../server/aiHandler'
+import { testConnection } from '../../server/aiHandler.js'
 
 // Vercel serverless function — production equivalent of the /api/ai/test-connection
 // route in server/vitePlugin.ts. Reuses the same framework-agnostic handler.

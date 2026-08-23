@@ -1,4 +1,4 @@
-import { handleAiCommand, classifyError } from '../../server/aiHandler'
+import { handleAiCommand, classifyError } from '../../server/aiHandler.js'
 
 // Vercel serverless function — production equivalent of the /api/ai/command
 // route in server/vitePlugin.ts. Reuses the same framework-agnostic handler.

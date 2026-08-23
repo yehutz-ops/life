@@ -1,5 +1,5 @@
-import { handleShipmentExtract } from '../../server/shipmentExtractHandler'
-import { classifyError } from '../../server/aiHandler'
+import { handleShipmentExtract } from '../../server/shipmentExtractHandler.js'
+import { classifyError } from '../../server/aiHandler.js'
 
 // Vercel serverless function — production equivalent of the /api/ai/extract-shipment
 // route in server/vitePlugin.ts. Reuses the same framework-agnostic handler.

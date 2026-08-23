@@ -1,7 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk'
-import { AI_RESPONSE_SCHEMA } from './aiSchema'
-import { buildSystemPrompt, RoutingRuleContext } from './systemPrompt'
-import { findMentionedRelativeDate } from './relativeDates'
+import { AI_RESPONSE_SCHEMA } from './aiSchema.js'
+import { buildSystemPrompt, RoutingRuleContext } from './systemPrompt.js'
+import { findMentionedRelativeDate } from './relativeDates.js'
 
 const MODEL = 'claude-haiku-4-5'
 const TIMEZONE = 'Asia/Jerusalem'

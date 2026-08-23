@@ -1,4 +1,4 @@
-import { computeUpcomingDates, UpcomingDates } from './relativeDates'
+import { computeUpcomingDates, UpcomingDates } from './relativeDates.js'
 
 const DOMAIN_LABELS: Record<string, string> = {
   work: 'עבודה',
