@@ -3,8 +3,8 @@
     { "source": "/((?!api/).*)", "destination": "/index.html" }
   ],
   "functions": {
-    "api/**/*.ts": {
-      "includeFiles": "server/**"
-    }
+    "api/email/health.ts": { "includeFiles": "server/**/*" },
+    "api/email/send-rfq.ts": { "includeFiles": "server/**/*" },
+    "api/email/fetch-new.ts": { "includeFiles": "server/**/*" }
   }
 }
