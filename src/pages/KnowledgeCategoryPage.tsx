@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
-import { useParams, Navigate, Link } from 'react-router-dom'
+import { useParams, Navigate } from 'react-router-dom'
+import BackButton from '../components/BackButton'
 import { useStore } from '../data/StoreContext'
 import { useConfirm } from '../data/ConfirmContext'
 import { getKnowledgeCategory, KnowledgeCategoryId } from '../data/personalKnowledgeCategories'
@@ -72,14 +73,7 @@ export default function KnowledgeCategoryPage() {
   return (
     <div className="space-y-6 pb-24">
       <div className="flex items-center gap-3">
-        <Link
-          to="/personal"
-          className="w-9 h-9 rounded-xl border border-stone-200 dark:border-stone-700 flex items-center justify-center text-stone-400 dark:text-stone-500 hover:bg-stone-50 dark:hover:bg-stone-800 shrink-0"
-          aria-label="חזרה לאישי"
-          title="חזרה לאישי"
-        >
-          ←
-        </Link>
+        <BackButton to="/personal" label="אישי" />
         <div>
           <h1 className="text-xl font-bold text-stone-800 dark:text-stone-100">{category.name}</h1>
           <p className="text-xs text-stone-400 dark:text-stone-500">

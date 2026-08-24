@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
+import BackButton from '../components/BackButton'
 import { PDFViewer, PDFDownloadLink, pdf } from '@react-pdf/renderer'
 import { RfqPdfDocument, RfqPdfData, RfqPdfDocumentFile } from '../pdf/RfqPdfDocument'
 import { useStore } from '../data/StoreContext'
@@ -484,14 +485,7 @@ export default function NewShipmentRequestPage() {
   return (
     <div className="space-y-6 pb-24 max-w-3xl">
       <div className="flex items-center gap-3">
-        <Link
-          to="/work/shipments"
-          className="w-9 h-9 rounded-xl border border-stone-200 dark:border-stone-700 flex items-center justify-center text-stone-400 dark:text-stone-500 hover:bg-stone-50 dark:hover:bg-stone-800 shrink-0"
-          aria-label="חזרה למשלוחים"
-          title="חזרה למשלוחים"
-        >
-          ←
-        </Link>
+        <BackButton to="/work/shipments" label="משלוחים" />
         <div className="flex items-center gap-2">
           <TruckIcon className="w-6 h-6 text-stone-700 dark:text-stone-200" />
           <h1 className="text-2xl font-bold text-stone-800 dark:text-stone-100">בקשת הצעת מחיר חדשה</h1>

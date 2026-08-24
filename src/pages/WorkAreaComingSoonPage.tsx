@@ -1,4 +1,5 @@
-import { useParams, Navigate, Link } from 'react-router-dom'
+import { useParams, Navigate } from 'react-router-dom'
+import BackButton from '../components/BackButton'
 import { getWorkArea, WorkAreaId } from '../data/workAreas'
 
 const VALID_IDS: WorkAreaId[] = ['more']
@@ -13,14 +14,7 @@ export default function WorkAreaComingSoonPage() {
   return (
     <div className="space-y-6 pb-24">
       <div className="flex items-center gap-3">
-        <Link
-          to="/work"
-          className="w-9 h-9 rounded-xl border border-stone-200 dark:border-stone-700 flex items-center justify-center text-stone-400 dark:text-stone-500 hover:bg-stone-50 dark:hover:bg-stone-800 shrink-0"
-          aria-label="חזרה לעבודה"
-          title="חזרה לעבודה"
-        >
-          ←
-        </Link>
+        <BackButton to="/work" label="עבודה" />
         <div>
           <h1 className="text-xl font-bold text-stone-800 dark:text-stone-100">{area.name}</h1>
           <p className="text-xs text-stone-400 dark:text-stone-500">{area.description}</p>

@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
+import BackButton from '../components/BackButton'
 import { useStore } from '../data/StoreContext'
 import { Card, EmptyLine } from '../components/ui'
 import StatusPill, { PillTone } from '../components/hub/StatusPill'
@@ -88,6 +89,7 @@ function brandActiveCampaignLabel(brand: Brand, campaigns: BrandCampaign[], toda
 }
 
 export default function BrandsPage() {
+  const navigate = useNavigate()
   const { brands, brandProducts, brandContentItems, brandCampaigns, brandPendingActivities, contentPieces, addBrand } = useStore()
   const [addOpen, setAddOpen] = useState(false)
   const today = todayISO()
@@ -169,17 +171,20 @@ export default function BrandsPage() {
   return (
     <div className="space-y-8 pb-24">
       <div className="flex items-start justify-between gap-4 flex-wrap">
-        <div>
-          <h1 className="text-2xl font-extrabold text-stone-900 dark:text-stone-100">קידום מותגים</h1>
-          <p className="text-stone-500 dark:text-stone-400 mt-1 text-sm">כל המותגים, הקמפיינים והתוכן במקום אחד</p>
+        <div className="flex items-start gap-3">
+          <BackButton to="/work" label="עבודה" />
+          <div>
+            <h1 className="text-2xl font-extrabold text-stone-900 dark:text-stone-100">קידום מותגים</h1>
+            <p className="text-stone-500 dark:text-stone-400 mt-1 text-sm">כל המותגים, הקמפיינים והתוכן במקום אחד</p>
+          </div>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={() => setAddOpen(true)} className="px-4 py-2 rounded-xl border border-amber-800 text-amber-800 dark:text-amber-400 dark:border-amber-700 text-sm font-medium">
-            + הוסף מותג
-          </button>
-          <Link to="/work/brands/import" className="px-4 py-2 rounded-xl bg-amber-800 text-white text-sm font-medium hover:bg-amber-900">
+          <Link to="/work/brands/import" className="px-4 py-2 rounded-xl border border-amber-800 text-amber-800 dark:text-amber-400 dark:border-amber-700 text-sm font-medium">
             ייבוא חבילת מותג
           </Link>
+          <button onClick={() => setAddOpen(true)} className="px-4 py-2 rounded-xl bg-amber-800 text-white text-sm font-medium hover:bg-amber-900">
+            + הוסף מותג
+          </button>
         </div>
       </div>
 
@@ -265,6 +270,47 @@ export default function BrandsPage() {
           </div>
         )}
       </div>
+
+      {/* 2.5 כל המותגים — טבלה קומפקטית לסריקה מהירה, בנוסף לגלריה למעלה */}
+      {brands.length > 0 && (
+        <div>
+          <h2 className="text-sm font-semibold text-stone-500 dark:text-stone-400 mb-3">כל המותגים</h2>
+          <Card className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-xs text-stone-400 dark:text-stone-500 border-b border-stone-100 dark:border-stone-800">
+                  <th className="text-right py-2 px-2 font-medium">שם</th>
+                  <th className="text-right py-2 px-2 font-medium">עדיפות</th>
+                  <th className="text-right py-2 px-2 font-medium">קמפיין פעיל</th>
+                  <th className="text-right py-2 px-2 font-medium">מוצרים</th>
+                  <th className="text-right py-2 px-2 font-medium">תכנים</th>
+                </tr>
+              </thead>
+              <tbody>
+                {brands.map((b) => {
+                  const priority = fieldStr(b.fields, 'priority')
+                  const activeCampaign = brandActiveCampaignLabel(b, brandCampaigns, today)
+                  return (
+                    <tr
+                      key={b.id}
+                      onClick={() => navigate(`/work/brands/${b.id}`)}
+                      className="border-b border-stone-50 dark:border-stone-800/60 last:border-0 cursor-pointer hover:bg-stone-50 dark:hover:bg-stone-800/50"
+                    >
+                      <td className="py-2 px-2 font-medium text-stone-800 dark:text-stone-100">{b.name}</td>
+                      <td className="py-2 px-2 text-stone-600 dark:text-stone-300">
+                        {priority === 'high' ? 'גבוהה' : priority === 'medium' ? 'בינונית' : priority === 'low' ? 'נמוכה' : '—'}
+                      </td>
+                      <td className="py-2 px-2 text-stone-600 dark:text-stone-300">{activeCampaign ?? '—'}</td>
+                      <td className="py-2 px-2 text-stone-600 dark:text-stone-300">{productCountOf(b.id)}</td>
+                      <td className="py-2 px-2 text-stone-600 dark:text-stone-300">{contentCountOf(b.id)}</td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </Card>
+        </div>
+      )}
 
       {/* 3. מותג בפוקוס */}
       {focusBrand && (

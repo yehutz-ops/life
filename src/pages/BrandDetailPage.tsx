@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useParams, useSearchParams, Link, Navigate } from 'react-router-dom'
+import BackLink from '../components/BackLink'
 import { useStore } from '../data/StoreContext'
 import { Card, EmptyLine, FilterChip } from '../components/ui'
 import StatusPill, { PillTone } from '../components/hub/StatusPill'
@@ -259,6 +260,7 @@ export default function BrandDetailPage() {
     promotionPlans,
     contentPieces,
     updateBrand,
+    deleteBrand,
     addBrandProduct,
     updateBrandProduct,
     deleteBrandProduct,
@@ -405,6 +407,12 @@ export default function BrandDetailPage() {
     setProductModal({ open: false })
   }
 
+  async function handleDeleteBrand() {
+    const ok = await confirm({ title: 'מחיקת מותג', message: `למחוק את ${brand!.name}? הפעולה בלתי הפיכה.`, confirmLabel: 'מחק', danger: true })
+    if (!ok) return
+    await deleteBrand(brand!.id)
+  }
+
   async function handleDeleteProduct() {
     if (!productModal.editingId) return
     const ok = await confirm({ title: 'מחיקת מוצר', message: 'למחוק את המוצר הזה?', confirmLabel: 'מחק', danger: true })
@@ -495,9 +503,7 @@ export default function BrandDetailPage() {
   return (
     <div className="space-y-6 pb-24">
       <div>
-        <Link to="/work/brands" className="text-sm text-stone-400 hover:text-stone-600 dark:hover:text-stone-300">
-          ← כל המותגים
-        </Link>
+        <BackLink to="/work/brands" label="כל המותגים" />
         <h1 className="text-2xl font-extrabold text-stone-900 dark:text-stone-100 mt-1">{brand.name}</h1>
       </div>
 
@@ -510,37 +516,43 @@ export default function BrandDetailPage() {
       </div>
 
       {group === 'overview' && (
-        <Card>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-base font-bold text-stone-900 dark:text-stone-100">סקירה כללית ואסטרטגיה</h2>
-            <button onClick={() => setEditOpen(true)} className="text-xs font-medium text-amber-800 dark:text-amber-400 hover:underline">
-              ערוך
-            </button>
-          </div>
-          <FieldList
-            fields={fields}
-            skip={['id', 'name', 'marketingStrategy', 'weeklyPlan', 'kpiReview', 'instagramComposio', 'standingRules', 'missingInformation', 'unrelated_incident_note']}
-          />
-          {Object.keys(marketingStrategy).length > 0 && (
-            <div className="mt-4 pt-4 border-t border-stone-100 dark:border-stone-800">
-              <h3 className="text-sm font-bold text-stone-800 dark:text-stone-100 mb-2">אסטרטגיית שיווק</h3>
-              <FieldList fields={marketingStrategy} />
+        <div className="space-y-3">
+          <Card>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-base font-bold text-stone-900 dark:text-stone-100">סקירה כללית ואסטרטגיה</h2>
+              <button onClick={() => setEditOpen(true)} className="text-xs font-medium text-amber-800 dark:text-amber-400 hover:underline">
+                ערוך
+              </button>
             </div>
-          )}
-          {standingRules.length > 0 && (
-            <div className="mt-4 pt-4 border-t border-stone-100 dark:border-stone-800">
-              <h3 className="text-sm font-bold text-stone-800 dark:text-stone-100 mb-2">כללי עבודה קבועים</h3>
-              <ul className="text-sm text-stone-600 dark:text-stone-300 space-y-1.5">
-                {standingRules.map((r) => (
-                  <li key={r.id}>
-                    <span className="font-medium">{r.title}</span>
-                    {r.description && <span className="text-stone-400 dark:text-stone-500"> — {r.description}</span>}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-        </Card>
+            <FieldList
+              fields={fields}
+              skip={['id', 'name', 'marketingStrategy', 'weeklyPlan', 'kpiReview', 'instagramComposio', 'standingRules', 'missingInformation', 'unrelated_incident_note']}
+            />
+            {Object.keys(marketingStrategy).length > 0 && (
+              <div className="mt-4 pt-4 border-t border-stone-100 dark:border-stone-800">
+                <h3 className="text-sm font-bold text-stone-800 dark:text-stone-100 mb-2">אסטרטגיית שיווק</h3>
+                <FieldList fields={marketingStrategy} />
+              </div>
+            )}
+            {standingRules.length > 0 && (
+              <div className="mt-4 pt-4 border-t border-stone-100 dark:border-stone-800">
+                <h3 className="text-sm font-bold text-stone-800 dark:text-stone-100 mb-2">כללי עבודה קבועים</h3>
+                <ul className="text-sm text-stone-600 dark:text-stone-300 space-y-1.5">
+                  {standingRules.map((r) => (
+                    <li key={r.id}>
+                      <span className="font-medium">{r.title}</span>
+                      {r.description && <span className="text-stone-400 dark:text-stone-500"> — {r.description}</span>}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </Card>
+
+          <button onClick={handleDeleteBrand} className="text-xs text-stone-400 hover:text-red-600 dark:hover:text-red-400">
+            מחק מותג
+          </button>
+        </div>
       )}
 
       {group === 'products' && (

@@ -2,6 +2,7 @@ import { useStore } from '../data/StoreContext'
 import { useDetailModal } from '../data/DetailModalContext'
 import { useConfirm } from '../data/ConfirmContext'
 import { Card } from '../components/ui'
+import BackButton from '../components/BackButton'
 
 const sourceLabel = { typed: '⌨️ הוקלד', spoken: '🎤 הוקלט', email: '📧 מייל' } as const
 const emailAccountLabel = { work: 'עבודה', personal: 'אישי' } as const
@@ -25,11 +26,14 @@ export default function InboxPage() {
 
   return (
     <div className="space-y-6 pb-24">
-      <div>
-        <h1 className="text-2xl font-extrabold text-stone-900 dark:text-stone-100">📥 תיבת כניסה</h1>
-        <p className="text-stone-500 dark:text-stone-400 mt-1 text-sm">
-          פריטים שהוספת מהר ועדיין לא שייכת לתחום. לחיצה על "לסדר" תבקש כותרת, תחום, תאריך וסוג, ותהפוך את זה לפריט אמיתי במערכת.
-        </p>
+      <div className="flex items-start gap-3">
+        <BackButton to="/" label="דף הבית" />
+        <div>
+          <h1 className="text-2xl font-extrabold text-stone-900 dark:text-stone-100">📥 תיבת כניסה</h1>
+          <p className="text-stone-500 dark:text-stone-400 mt-1 text-sm">
+            פריטים שהוספת מהר ועדיין לא שייכת לתחום. לחיצה על "לסדר" תבקש כותרת, תחום, תאריך וסוג, ותהפוך את זה לפריט אמיתי במערכת.
+          </p>
+        </div>
       </div>
 
       <div className="space-y-4">

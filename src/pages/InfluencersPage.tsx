@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
+import BackButton from '../components/BackButton'
 import { useStore } from '../data/StoreContext'
 import { UsersIcon } from '../components/hub/hubIcons'
 import { Card, FilterChip, EmptyLine } from '../components/ui'
@@ -40,9 +41,10 @@ const ADD_INFLUENCER_FIELDS: QuickAddField[] = [
 type SortKey = 'name' | 'followers' | 'totalCost' | 'content' | 'views' | 'orders' | 'revenue' | 'roas' | 'costPerOrder'
 
 export default function InfluencersPage() {
+  const navigate = useNavigate()
   const { influencers, influencerProducts, influencerContent, influencerSales, addInfluencer } = useStore()
   const [month, setMonth] = useState(currentMonth())
-  const [tab, setTab] = useState<'dashboard' | 'compare'>('dashboard')
+  const [tab, setTab] = useState<'dashboard' | 'compare'>('compare')
   const [addOpen, setAddOpen] = useState(false)
   const [sortKey, setSortKey] = useState<SortKey>('revenue')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
@@ -135,14 +137,7 @@ export default function InfluencersPage() {
     <div className="space-y-6 pb-24">
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div className="flex items-center gap-3">
-          <Link
-            to="/work"
-            className="w-9 h-9 rounded-xl border border-stone-200 dark:border-stone-700 flex items-center justify-center text-stone-400 dark:text-stone-500 hover:bg-stone-50 dark:hover:bg-stone-800 shrink-0"
-            aria-label="חזרה לעבודה"
-            title="חזרה לעבודה"
-          >
-            ←
-          </Link>
+          <BackButton to="/work" label="עבודה" />
           <div className="flex items-center gap-2">
             <UsersIcon className="w-6 h-6 text-stone-700 dark:text-stone-200" />
             <h1 className="text-2xl font-bold text-stone-800 dark:text-stone-100">משפיענים</h1>
@@ -189,11 +184,11 @@ export default function InfluencersPage() {
       )}
 
       <div className="flex items-center gap-2">
-        <FilterChip active={tab === 'dashboard'} onClick={() => setTab('dashboard')}>
-          דשבורד
-        </FilterChip>
         <FilterChip active={tab === 'compare'} onClick={() => setTab('compare')}>
-          השוואה
+          טבלה
+        </FilterChip>
+        <FilterChip active={tab === 'dashboard'} onClick={() => setTab('dashboard')}>
+          כרטיסים
         </FilterChip>
       </div>
 
@@ -236,12 +231,12 @@ export default function InfluencersPage() {
               </thead>
               <tbody>
                 {sortedRows.map(({ influencer, metrics }) => (
-                  <tr key={influencer.id} className="border-b border-stone-50 dark:border-stone-800/60 last:border-0">
-                    <td className="py-2 px-2">
-                      <Link to={`/work/influencers/${influencer.id}`} className="font-medium text-stone-800 dark:text-stone-100 hover:underline">
-                        {influencer.name}
-                      </Link>
-                    </td>
+                  <tr
+                    key={influencer.id}
+                    onClick={() => navigate(`/work/influencers/${influencer.id}`)}
+                    className="border-b border-stone-50 dark:border-stone-800/60 last:border-0 cursor-pointer hover:bg-stone-50 dark:hover:bg-stone-800/50"
+                  >
+                    <td className="py-2 px-2 font-medium text-stone-800 dark:text-stone-100">{influencer.name}</td>
                     <td className="py-2 px-2 text-stone-600 dark:text-stone-300">{influencer.followers?.toLocaleString('he-IL') ?? '—'}</td>
                     <td className="py-2 px-2 text-stone-600 dark:text-stone-300">{formatILS(metrics.totalCost)}</td>
                     <td className="py-2 px-2 text-stone-600 dark:text-stone-300">{metrics.contentCompleted.total}</td>

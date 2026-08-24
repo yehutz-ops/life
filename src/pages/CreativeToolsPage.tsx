@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom'
+import BackButton from '../components/BackButton'
 import { WrenchIcon } from '../components/hub/hubIcons'
 import { Card } from '../components/ui'
 import StatusPill from '../components/hub/StatusPill'
@@ -17,14 +17,7 @@ export default function CreativeToolsPage() {
   return (
     <div className="space-y-6 pb-24">
       <div className="flex items-center gap-3">
-        <Link
-          to="/work/brands"
-          className="w-9 h-9 rounded-xl border border-stone-200 dark:border-stone-700 flex items-center justify-center text-stone-400 dark:text-stone-500 hover:bg-stone-50 dark:hover:bg-stone-800 shrink-0"
-          aria-label="חזרה למותגים"
-          title="חזרה למותגים"
-        >
-          ←
-        </Link>
+        <BackButton to="/work/brands" label="מותגים" />
         <div className="flex items-center gap-2">
           <WrenchIcon className="w-6 h-6 text-stone-700 dark:text-stone-200" />
           <h1 className="text-2xl font-bold text-stone-800 dark:text-stone-100">כלי יצירה ואינטגרציות</h1>

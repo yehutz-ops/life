@@ -1,6 +1,5 @@
 // אייקונים קוויים מינימליים, ללא תלות בספריית אייקונים חיצונית — stroke=currentColor בלבד.
 import { ReactNode } from 'react'
-import { WorkCategoryId } from '../../data/workHubCategories'
 
 type IconProps = { className?: string }
 
@@ -220,15 +219,4 @@ export function WalletIcon(props: IconProps) {
       <circle cx="16" cy="13" r="1.1" fill="currentColor" stroke="none" />
     </Base>
   )
-}
-
-export const workCategoryIcons: Record<WorkCategoryId | 'brands', (props: IconProps) => JSX.Element> = {
-  brands: TagIcon,
-  content: CameraIcon,
-  collaborations: UsersIcon,
-  shipments: BoxIcon,
-  suppliers: TruckIcon,
-  campaigns: MegaphoneIcon,
-  meetings: CalendarIcon,
-  operations: ChecklistIcon,
 }

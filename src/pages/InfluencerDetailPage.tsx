@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
-import { useParams, Link, Navigate } from 'react-router-dom'
+import { useParams, Navigate } from 'react-router-dom'
+import BackLink from '../components/BackLink'
 import { useStore } from '../data/StoreContext'
 import { Card, EmptyLine, FilterChip } from '../components/ui'
 import StatusPill, { PillTone } from '../components/hub/StatusPill'
@@ -224,13 +225,21 @@ export default function InfluencerDetailPage() {
     [campaigns],
   )
 
+  // useMemo נשארים לפני ה-return המוקדם בכוונה — קריאה מותנית ל-hooks בין רינדורים שוברת את React.
+  const products = useMemo(
+    () => (influencer ? [...influencerProducts.filter((p) => p.influencerId === influencer.id)].sort((a, b) => b.dateSent.localeCompare(a.dateSent)) : []),
+    [influencerProducts, influencer],
+  )
+  const content = useMemo(
+    () =>
+      influencer
+        ? [...influencerContent.filter((c) => c.influencerId === influencer.id)].sort((a, b) => (b.dueDate ?? b.publishDate ?? '').localeCompare(a.dueDate ?? a.publishDate ?? ''))
+        : [],
+    [influencerContent, influencer],
+  )
+
   if (!influencer) return <Navigate to="/work/influencers" replace />
 
-  const products = useMemo(() => [...influencerProducts.filter((p) => p.influencerId === influencer.id)].sort((a, b) => b.dateSent.localeCompare(a.dateSent)), [influencerProducts, influencer.id])
-  const content = useMemo(
-    () => [...influencerContent.filter((c) => c.influencerId === influencer.id)].sort((a, b) => (b.dueDate ?? b.publishDate ?? '').localeCompare(a.dueDate ?? a.publishDate ?? '')),
-    [influencerContent, influencer.id],
-  )
   const sale = influencerSales.find((s) => s.influencerId === influencer.id && s.month === month)
   const monthCost = computeInfluencerMonthlyCost(influencer, influencerProducts, month)
   const metrics = computeInfluencerMonthMetrics(influencer, influencerProducts, influencerContent, sale, month)
@@ -404,9 +413,7 @@ export default function InfluencerDetailPage() {
     <div className="space-y-6 pb-24">
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
-          <Link to="/work/influencers" className="text-sm text-stone-400 hover:text-stone-600 dark:hover:text-stone-300">
-            ← כל המשפיענים
-          </Link>
+          <BackLink to="/work/influencers" label="כל המשפיענים" />
           <div className="flex items-center gap-3 mt-1">
             <div className="w-12 h-12 rounded-full overflow-hidden bg-stone-100 dark:bg-stone-800 flex items-center justify-center shrink-0">
               {influencer.photoUrl ? <img src={influencer.photoUrl} alt="" className="w-full h-full object-cover" /> : <PersonIcon className="w-5 h-5 text-stone-400" />}

@@ -7,7 +7,6 @@ import ProjectsPage from './pages/ProjectsPage'
 import CalendarPage from './pages/CalendarPage'
 import DomainPage from './pages/DomainPage'
 import WorkPage from './pages/WorkPage'
-import WorkCategoryPage from './pages/WorkCategoryPage'
 import WorkAreaComingSoonPage from './pages/WorkAreaComingSoonPage'
 import InfluencersPage from './pages/InfluencersPage'
 import InfluencerDetailPage from './pages/InfluencerDetailPage'
@@ -85,7 +84,6 @@ export default function App() {
                         <Route path="work/content-analytics" element={<ContentAnalyticsPage />} />
                         <Route path="work/creative-tools" element={<CreativeToolsPage />} />
                         <Route path="work/area/:areaId" element={<WorkAreaComingSoonPage />} />
-                        <Route path="work/:categoryId" element={<WorkCategoryPage />} />
                         <Route path="studies" element={<DomainPage domainId="studies" />} />
                         <Route path="personal" element={<PersonalPage />} />
                         <Route path="personal/:categoryId" element={<KnowledgeCategoryPage />} />

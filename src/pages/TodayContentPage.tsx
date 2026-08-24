@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import BackButton from '../components/BackButton'
 import { useStore } from '../data/StoreContext'
 import { TargetIcon } from '../components/hub/hubIcons'
 import { Card, EmptyLine } from '../components/ui'
@@ -7,6 +7,7 @@ import StatusPill, { PillTone } from '../components/hub/StatusPill'
 import QuickAddPopover, { QuickAddField } from '../components/hub/QuickAddPopover'
 import { todayISO } from '../utils/date'
 import { ContentPiece, ContentPieceStatus, ContentPieceType } from '../data/contentStudioTypes'
+import { useConfirm } from '../data/ConfirmContext'
 
 const STATUS_LABEL: Record<ContentPieceStatus, string> = {
   idea: 'רעיון',
@@ -32,7 +33,8 @@ const STATUS_TONE: Record<ContentPieceStatus, PillTone> = {
 }
 
 export default function TodayContentPage() {
-  const { contentPieces, brands, brandProducts, campaigns, addContentPiece, updateContentPiece } = useStore()
+  const { contentPieces, brands, brandProducts, campaigns, addContentPiece, updateContentPiece, deleteContentPiece } = useStore()
+  const confirm = useConfirm()
   const [addOpen, setAddOpen] = useState(false)
   const today = todayISO()
 
@@ -106,6 +108,15 @@ export default function TodayContentPage() {
   async function reject(c: ContentPiece) {
     await updateContentPiece(c.id, { status: 'draft' })
   }
+  async function remove(c: ContentPiece) {
+    const ok = await confirm({
+      title: 'למחוק את פריט התוכן?',
+      message: c.creativeIdea || `${brandName(c.brandId)} · ${c.contentType}`,
+      confirmLabel: 'מחק',
+      danger: true,
+    })
+    if (ok) await deleteContentPiece(c.id)
+  }
 
   function ContentRow({ c, actions }: { c: ContentPiece; actions?: boolean }) {
     return (
@@ -117,19 +128,24 @@ export default function TodayContentPage() {
           <StatusPill label={STATUS_LABEL[c.status]} tone={STATUS_TONE[c.status]} />
         </div>
         {c.creativeIdea && <div className="text-xs text-stone-500 dark:text-stone-400 mt-1 truncate">{c.creativeIdea}</div>}
-        {actions && (
-          <div className="flex items-center gap-3 mt-2 text-xs">
-            <button onClick={() => approve(c)} className="text-emerald-700 dark:text-emerald-400 font-medium hover:underline">
-              אשר
-            </button>
-            <button onClick={() => requestChange(c)} className="text-amber-700 dark:text-amber-400 font-medium hover:underline">
-              בקש שינוי
-            </button>
-            <button onClick={() => reject(c)} className="text-red-600 dark:text-red-400 font-medium hover:underline">
-              דחה
-            </button>
-          </div>
-        )}
+        <div className="flex items-center gap-3 mt-2 text-xs">
+          {actions && (
+            <>
+              <button onClick={() => approve(c)} className="text-emerald-700 dark:text-emerald-400 font-medium hover:underline">
+                אשר
+              </button>
+              <button onClick={() => requestChange(c)} className="text-amber-700 dark:text-amber-400 font-medium hover:underline">
+                בקש שינוי
+              </button>
+              <button onClick={() => reject(c)} className="text-red-600 dark:text-red-400 font-medium hover:underline">
+                דחה
+              </button>
+            </>
+          )}
+          <button onClick={() => remove(c)} className="text-stone-400 dark:text-stone-500 font-medium hover:text-red-600 dark:hover:text-red-400 hover:underline">
+            מחק
+          </button>
+        </div>
       </li>
     )
   }
@@ -138,14 +154,7 @@ export default function TodayContentPage() {
     <div className="space-y-6 pb-24">
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div className="flex items-center gap-3">
-          <Link
-            to="/work/brands"
-            className="w-9 h-9 rounded-xl border border-stone-200 dark:border-stone-700 flex items-center justify-center text-stone-400 dark:text-stone-500 hover:bg-stone-50 dark:hover:bg-stone-800 shrink-0"
-            aria-label="חזרה למותגים"
-            title="חזרה למותגים"
-          >
-            ←
-          </Link>
+          <BackButton to="/work/brands" label="מותגים" />
           <div className="flex items-center gap-2">
             <TargetIcon className="w-6 h-6 text-stone-700 dark:text-stone-200" />
             <h1 className="text-2xl font-bold text-stone-800 dark:text-stone-100">התוכן להיום</h1>

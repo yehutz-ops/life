@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useParams, Link, Navigate } from 'react-router-dom'
+import BackLink from '../components/BackLink'
 import { useStore } from '../data/StoreContext'
 import { Card, EmptyLine, FilterChip } from '../components/ui'
 import StatusPill, { PillTone } from '../components/hub/StatusPill'
@@ -168,9 +169,7 @@ export default function CampaignDetailPage() {
   return (
     <div className="space-y-6 pb-24">
       <div>
-        <Link to="/work/campaigns" className="text-sm text-stone-400 hover:text-stone-600 dark:hover:text-stone-300">
-          ← כל הקמפיינים
-        </Link>
+        <BackLink to="/work/campaigns" label="כל הקמפיינים" />
         <div className="flex items-center gap-2 mt-1">
           <h1 className="text-xl font-extrabold text-stone-900 dark:text-stone-100">{campaign.name}</h1>
           <StatusPill label={STATUS_LABEL[campaign.status]} tone={STATUS_TONE[campaign.status]} />

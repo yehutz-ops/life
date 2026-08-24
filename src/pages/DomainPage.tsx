@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
+import BackButton from '../components/BackButton'
 import { useStore } from '../data/StoreContext'
 import { getDomain } from '../data/domains'
 import { Card, ProgressBar, EmptyLine } from '../components/ui'
@@ -22,6 +23,9 @@ export default function DomainPage({ domainId }: { domainId: DomainId }) {
 
   return (
     <div className="space-y-6 pb-24">
+      <div className="flex items-center gap-3">
+        <BackButton to="/" label="דף הבית" />
+      </div>
       <div className={`rounded-2xl p-6 ${domain.classes.bg}`}>
         <div className="flex items-center gap-3 mb-2">
           <span className="text-3xl">{domain.icon}</span>

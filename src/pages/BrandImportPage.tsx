@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
+import BackLink from '../components/BackLink'
 import { Card } from '../components/ui'
 import { useStore } from '../data/StoreContext'
 import { useNotify } from '../data/NotificationContext'
@@ -100,9 +101,7 @@ export default function BrandImportPage() {
   return (
     <div className="space-y-6 pb-24">
       <div>
-        <Link to="/work/brands" className="text-sm text-stone-400 hover:text-stone-600 dark:hover:text-stone-300">
-          ← כל המותגים
-        </Link>
+        <BackLink to="/work/brands" label="כל המותגים" />
         <h1 className="text-2xl font-extrabold text-stone-900 dark:text-stone-100 mt-1">ייבוא חבילת מותג</h1>
         <p className="text-stone-500 dark:text-stone-400 mt-1 text-sm">
           קובץ JSON כללי (brand_knowledge_package) — עובד לכל מותג, לא רק FOMOWA. תמיד: בדיקה ← Preview ← אישור ← כתיבה.

@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { useParams, Link, Navigate } from 'react-router-dom'
+import { useParams, Navigate } from 'react-router-dom'
+import BackLink from '../components/BackLink'
 import { useStore } from '../data/StoreContext'
 import { Card, EmptyLine, FilterChip } from '../components/ui'
 import StatusPill, { PillTone } from '../components/hub/StatusPill'
@@ -263,9 +264,7 @@ export default function ShipmentDetailPage() {
     <div className="space-y-6 pb-24">
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
-          <Link to="/work/shipments" className="text-sm text-stone-400 hover:text-stone-600 dark:hover:text-stone-300">
-            ← כל המשלוחים
-          </Link>
+          <BackLink to="/work/shipments" label="כל המשלוחים" />
           <div className="flex items-center gap-2 mt-1">
             <h1 className="text-xl font-extrabold text-stone-900 dark:text-stone-100">
               #{shipment.id.slice(-6)} · {brand?.name ?? shipment.supplierName ?? 'ספק לא ידוע'}
