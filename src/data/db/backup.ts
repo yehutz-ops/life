@@ -5,10 +5,11 @@ import { Influencer, InfluencerProduct, InfluencerContent, InfluencerSale } from
 import { Campaign, CampaignCreative } from '../campaignTypes'
 import { Shipment, ShipmentQuote, ShipmentDocument, ShipmentTimelineEvent, Forwarder } from '../shipmentTypes'
 import { MediaAsset, IdeaBankItem, ContentPiece, VideoScript, ContentRule, PromotionPlan } from '../contentStudioTypes'
+import { Course, Grade, DegreeRequirementCategory, StudyMaterial } from '../studyTypes'
 
 interface BackupFile {
   exportedAt: string
-  version: 1 | 2 | 3 | 4 | 5
+  version: 1 | 2 | 3 | 4 | 5 | 6
   items: Item[]
   projects: Project[]
   inbox: InboxEntry[]
@@ -37,6 +38,10 @@ interface BackupFile {
   videoScripts?: VideoScript[]
   contentRules?: ContentRule[]
   promotionPlans?: PromotionPlan[]
+  courses?: Course[]
+  grades?: Grade[]
+  degreeRequirementCategories?: DegreeRequirementCategory[]
+  studyMaterials?: StudyMaterial[]
 }
 
 async function collectBackupData(): Promise<BackupFile> {
@@ -69,6 +74,10 @@ async function collectBackupData(): Promise<BackupFile> {
     videoScripts,
     contentRules,
     promotionPlans,
+    courses,
+    grades,
+    degreeRequirementCategories,
+    studyMaterials,
   ] = await Promise.all([
     repository.getAllItems(),
     repository.getAllProjects(),
@@ -98,10 +107,14 @@ async function collectBackupData(): Promise<BackupFile> {
     repository.getAllVideoScripts(),
     repository.getAllContentRules(),
     repository.getAllPromotionPlans(),
+    repository.getAllCourses(),
+    repository.getAllGrades(),
+    repository.getAllDegreeRequirementCategories(),
+    repository.getAllStudyMaterials(),
   ])
   return {
     exportedAt: new Date().toISOString(),
-    version: 5,
+    version: 6,
     items,
     projects,
     inbox,
@@ -130,6 +143,10 @@ async function collectBackupData(): Promise<BackupFile> {
     videoScripts,
     contentRules,
     promotionPlans,
+    courses,
+    grades,
+    degreeRequirementCategories,
+    studyMaterials,
   }
 }
 
@@ -196,6 +213,10 @@ export async function importBackup(data: BackupFile) {
     ...(data.videoScripts ?? []).map((s) => repository.putVideoScript(s)),
     ...(data.contentRules ?? []).map((r) => repository.putContentRule(r)),
     ...(data.promotionPlans ?? []).map((p) => repository.putPromotionPlan(p)),
+    ...(data.courses ?? []).map((c) => repository.putCourse(c)),
+    ...(data.grades ?? []).map((g) => repository.putGrade(g)),
+    ...(data.degreeRequirementCategories ?? []).map((c) => repository.putDegreeRequirementCategory(c)),
+    ...(data.studyMaterials ?? []).map((m) => repository.putStudyMaterial(m)),
   ])
   await repository.markSeeded()
 }

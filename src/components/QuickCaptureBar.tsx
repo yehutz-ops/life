@@ -15,7 +15,9 @@ export const MEDIUM_CONFIDENCE = 0.65
 
 type AutoSaved = { itemId: string; tier: 'high' | 'medium'; domainLabel: string; domainIcon: string; destination?: string; needsApproval: boolean }
 
-export default function QuickCaptureBar() {
+// variant: 'stacked' (ברירת מחדל) — שדה מעל שורת כפתורים, כפי שמופיע בדף הבית ובבית.
+// 'inline' — שורה אחת רחבה (שדה + כפתורים באותו גובה), לשימוש ב-Hubs רחבים כמו עמוד לימודים.
+export default function QuickCaptureBar({ variant = 'stacked', placeholder }: { variant?: 'stacked' | 'inline'; placeholder?: string } = {}) {
   const { items, projects, brands, brandProducts, brandCampaigns, addInboxEntry, addItem, deleteItem } = useStore()
   const { openEdit, openCreate } = useDetailModal()
   const { openEdit: openProjectEdit } = useProjectForm()
@@ -167,6 +169,80 @@ export default function QuickCaptureBar() {
     resetAll()
   }
 
+  function onInputChange(value: string) {
+    setText(value)
+    if (aiResult || aiError || autoSaved) {
+      setAiResult(null)
+      setAiError('')
+      setAutoSaved(null)
+    }
+  }
+
+  function onInputKeyDown(e: React.KeyboardEvent) {
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      // Enter תמיד שולח: דרך ה-AI (סיווג וצירוף אוטומטי) כשהוא מופעל, אחרת הוספה רגילה לתיבת הכניסה.
+      if (aiEnabled) triggerAi()
+      else handleAdd()
+    }
+  }
+
+  if (variant === 'inline') {
+    return (
+      <div className="relative">
+        <div className="flex items-center gap-2 h-14 px-3 rounded-2xl border border-stone-200/80 dark:border-stone-700 bg-white dark:bg-stone-900 shadow-sm shadow-stone-200/40 dark:shadow-none transition-shadow focus-within:shadow-md">
+          <button
+            onClick={() => setAiActive(false)}
+            title="חיפוש רגיל בתוך המערכת"
+            aria-label="חיפוש רגיל בתוך המערכת"
+            className="w-8 h-8 shrink-0 rounded-lg flex items-center justify-center text-stone-400 dark:text-stone-500 hover:text-stone-600 dark:hover:text-stone-300"
+          >
+            🔍
+          </button>
+          <input
+            value={text}
+            onChange={(e) => onInputChange(e.target.value)}
+            onKeyDown={onInputKeyDown}
+            placeholder={placeholder ?? 'כתוב או אמור משהו שצריך לזכור...'}
+            className="flex-1 min-w-0 bg-transparent text-[15px] text-stone-800 dark:text-stone-100 placeholder:text-stone-400 dark:placeholder:text-stone-500 focus:outline-none"
+          />
+          {aiEnabled && (
+            <button
+              onClick={triggerAi}
+              title="חיפוש חכם עם Claude AI"
+              aria-label="חיפוש חכם עם Claude AI"
+              aria-pressed={aiActive}
+              className={`w-10 h-10 shrink-0 rounded-xl flex items-center justify-center transition-colors ${
+                aiActive ? 'bg-violet-700 text-white' : 'bg-stone-50 dark:bg-stone-800 text-stone-400 dark:text-stone-500 hover:text-stone-600 dark:hover:text-stone-300'
+              }`}
+            >
+              ✨
+            </button>
+          )}
+          <button
+            onClick={toggle}
+            title="הקלטה קולית — רק הופכת דיבור לטקסט, לא שומרת"
+            aria-label="הקלטה קולית — רק הופכת דיבור לטקסט, לא שומרת"
+            className={`w-10 h-10 shrink-0 rounded-xl flex items-center justify-center transition-colors ${
+              isListening ? 'bg-amber-800 text-white animate-pulse' : 'bg-stone-50 dark:bg-stone-800 text-stone-500 dark:text-stone-300 hover:bg-stone-100 dark:hover:bg-stone-700'
+            }`}
+          >
+            🎤
+          </button>
+          <button
+            onClick={handleAdd}
+            title="הוספה לתיבת הכניסה"
+            aria-label="הוספה לתיבת הכניסה"
+            className="w-10 h-10 shrink-0 rounded-xl bg-[#F5E5D2] dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 hover:bg-[#EFD9BF] dark:hover:bg-amber-900/60 flex items-center justify-center text-xl font-medium transition-colors"
+          >
+            +
+          </button>
+        </div>
+        {renderFeedback()}
+      </div>
+    )
+  }
+
   return (
     <div className="relative">
       <div className="rounded-3xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-900 shadow-sm shadow-stone-200/50 dark:shadow-none overflow-hidden transition-shadow focus-within:shadow-md">
@@ -241,6 +317,14 @@ export default function QuickCaptureBar() {
         </div>
       </div>
 
+      {renderFeedback()}
+    </div>
+  )
+
+  // פאנלי המשוב (הקלטה, שגיאות, תוצאות AI, התאמות קיימות) משותפים לשני ה-variants.
+  function renderFeedback() {
+    return (
+      <>
       {isListening && <p className="text-xs text-amber-800 dark:text-amber-400 mt-2 px-2">מקליט... דבר עכשיו</p>}
       {!isSupported && error && <p className="text-xs text-stone-400 dark:text-stone-500 mt-2 px-2">{error}</p>}
       {isSupported && error && <p className="text-xs text-stone-500 dark:text-stone-400 mt-2 px-2">{error}</p>}
@@ -375,6 +459,7 @@ export default function QuickCaptureBar() {
           )}
         </div>
       )}
-    </div>
-  )
+      </>
+    )
+  }
 }

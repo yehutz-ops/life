@@ -58,6 +58,9 @@ export interface Item {
   stage?: string // שלב עבודה כללי, למשל למאמרים: idea | draft | editing | done
   summary?: string // תקציר/רעיון קצר (מאמרים)
   convertTo?: string // 'article' | 'project' — סימון עתידי בלבד (רעיונות)
+  // שדות עמוד לימודים — Additive, אופציונליים, רלוונטיים רק כש-domain === 'studies'.
+  courseId?: string // קישור לקורס (src/data/studyTypes.ts), לא משפיע על פריטים בתחומים אחרים
+  studyKind?: 'assignment' | 'reading' | 'exam' | 'submission'
   createdAt: string
   updatedAt: string
   completedAt?: string

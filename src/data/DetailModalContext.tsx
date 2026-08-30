@@ -11,6 +11,8 @@ export interface ItemPrefill {
   projectId?: string
   personName?: string
   notes?: string
+  courseId?: string
+  studyKind?: 'assignment' | 'reading' | 'exam' | 'submission'
 }
 
 export type ItemModalTarget =

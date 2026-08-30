@@ -5,6 +5,7 @@ import { Influencer, InfluencerProduct, InfluencerContent, InfluencerSale } from
 import { Campaign, CampaignCreative } from './campaignTypes'
 import { Shipment, ShipmentQuote, ShipmentDocument, ShipmentTimelineEvent, Forwarder } from './shipmentTypes'
 import { MediaAsset, IdeaBankItem, ContentPiece, VideoScript, ContentRule, PromotionPlan } from './contentStudioTypes'
+import { Course, Grade, DegreeRequirementCategory, StudyMaterial } from './studyTypes'
 import { repository } from './db/repository'
 import { seedIfEmpty } from './db/seed'
 import { isIndexedDBAvailable } from './db/database'
@@ -43,6 +44,10 @@ interface StoreValue {
   videoScripts: VideoScript[]
   contentRules: ContentRule[]
   promotionPlans: PromotionPlan[]
+  courses: Course[]
+  grades: Grade[]
+  degreeRequirementCategories: DegreeRequirementCategory[]
+  studyMaterials: StudyMaterial[]
   loading: boolean
   storageAvailable: boolean
   addItem: (data: Omit<Item, 'id' | 'createdAt' | 'updatedAt'>) => Promise<Item>
@@ -119,6 +124,17 @@ interface StoreValue {
   addCampaignCreative: (data: Omit<CampaignCreative, 'id' | 'createdAt' | 'updatedAt'>) => Promise<CampaignCreative>
   updateCampaignCreative: (id: string, patch: Partial<CampaignCreative>) => Promise<void>
   deleteCampaignCreative: (id: string) => Promise<void>
+  addCourse: (data: Omit<Course, 'id' | 'createdAt' | 'updatedAt'>) => Promise<Course>
+  updateCourse: (id: string, patch: Partial<Course>) => Promise<void>
+  deleteCourse: (id: string) => Promise<void>
+  addGrade: (data: Omit<Grade, 'id' | 'createdAt' | 'updatedAt'>) => Promise<Grade>
+  updateGrade: (id: string, patch: Partial<Grade>) => Promise<void>
+  deleteGrade: (id: string) => Promise<void>
+  addDegreeRequirementCategory: (data: Omit<DegreeRequirementCategory, 'id' | 'createdAt' | 'updatedAt'>) => Promise<DegreeRequirementCategory>
+  updateDegreeRequirementCategory: (id: string, patch: Partial<DegreeRequirementCategory>) => Promise<void>
+  deleteDegreeRequirementCategory: (id: string) => Promise<void>
+  addStudyMaterial: (data: Omit<StudyMaterial, 'id' | 'createdAt' | 'updatedAt'>) => Promise<StudyMaterial>
+  deleteStudyMaterial: (id: string) => Promise<void>
   clearSampleData: () => Promise<void>
   reloadFromDisk: () => Promise<void>
 }
@@ -154,12 +170,16 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [videoScripts, setVideoScripts] = useState<VideoScript[]>([])
   const [contentRules, setContentRules] = useState<ContentRule[]>([])
   const [promotionPlans, setPromotionPlans] = useState<PromotionPlan[]>([])
+  const [courses, setCourses] = useState<Course[]>([])
+  const [grades, setGrades] = useState<Grade[]>([])
+  const [degreeRequirementCategories, setDegreeRequirementCategories] = useState<DegreeRequirementCategory[]>([])
+  const [studyMaterials, setStudyMaterials] = useState<StudyMaterial[]>([])
   const [loading, setLoading] = useState(true)
   const storageAvailable = isIndexedDBAvailable()
   const notify = useNotify()
 
   async function loadAll() {
-    const [i, p, ib, br, bp, bc, bci, bpa, bma, inf, infp, infc, infs, camp, campc, sh, shq, shd, shte, fw, bcn, bdc, cma, ibi, cp, vs, cr, pp] = await Promise.all([
+    const [i, p, ib, br, bp, bc, bci, bpa, bma, inf, infp, infc, infs, camp, campc, sh, shq, shd, shte, fw, bcn, bdc, cma, ibi, cp, vs, cr, pp, crs, grd, drc, sm] = await Promise.all([
       repository.getAllItems(),
       repository.getAllProjects(),
       repository.getAllInboxEntries(),
@@ -188,6 +208,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       repository.getAllVideoScripts(),
       repository.getAllContentRules(),
       repository.getAllPromotionPlans(),
+      repository.getAllCourses(),
+      repository.getAllGrades(),
+      repository.getAllDegreeRequirementCategories(),
+      repository.getAllStudyMaterials(),
     ])
     setItems(i)
     setProjects(p)
@@ -217,6 +241,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setVideoScripts(vs)
     setContentRules(cr)
     setPromotionPlans(pp)
+    setCourses(crs)
+    setGrades(grd)
+    setDegreeRequirementCategories(drc)
+    setStudyMaterials(sm)
   }
 
   useEffect(() => {
@@ -999,6 +1027,130 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  async function addCourse(data: Omit<Course, 'id' | 'createdAt' | 'updatedAt'>) {
+    const now = nowISO()
+    const course: Course = { ...data, id: newId('course'), createdAt: now, updatedAt: now }
+    try {
+      await repository.putCourse(course)
+      setCourses((prev) => [course, ...prev])
+      return course
+    } catch (err: any) {
+      notify(`לא הצלחתי לשמור את הקורס: ${err.message ?? err}`, 'error')
+      throw err
+    }
+  }
+
+  async function updateCourse(id: string, patch: Partial<Course>) {
+    const current = courses.find((c) => c.id === id)
+    if (!current) return
+    const next: Course = { ...current, ...patch, updatedAt: nowISO() }
+    try {
+      await repository.putCourse(next)
+      setCourses((prev) => prev.map((c) => (c.id === id ? next : c)))
+    } catch (err: any) {
+      notify(`לא הצלחתי לשמור את השינוי: ${err.message ?? err}`, 'error')
+    }
+  }
+
+  async function deleteCourse(id: string) {
+    try {
+      await repository.deleteCourse(id)
+      setCourses((prev) => prev.filter((c) => c.id !== id))
+    } catch (err: any) {
+      notify(`לא הצלחתי למחוק את הקורס: ${err.message ?? err}`, 'error')
+    }
+  }
+
+  async function addGrade(data: Omit<Grade, 'id' | 'createdAt' | 'updatedAt'>) {
+    const now = nowISO()
+    const grade: Grade = { ...data, id: newId('grade'), createdAt: now, updatedAt: now }
+    try {
+      await repository.putGrade(grade)
+      setGrades((prev) => [grade, ...prev])
+      return grade
+    } catch (err: any) {
+      notify(`לא הצלחתי לשמור את הציון: ${err.message ?? err}`, 'error')
+      throw err
+    }
+  }
+
+  async function updateGrade(id: string, patch: Partial<Grade>) {
+    const current = grades.find((g) => g.id === id)
+    if (!current) return
+    const next: Grade = { ...current, ...patch, updatedAt: nowISO() }
+    try {
+      await repository.putGrade(next)
+      setGrades((prev) => prev.map((g) => (g.id === id ? next : g)))
+    } catch (err: any) {
+      notify(`לא הצלחתי לשמור את השינוי: ${err.message ?? err}`, 'error')
+    }
+  }
+
+  async function deleteGrade(id: string) {
+    try {
+      await repository.deleteGrade(id)
+      setGrades((prev) => prev.filter((g) => g.id !== id))
+    } catch (err: any) {
+      notify(`לא הצלחתי למחוק את הציון: ${err.message ?? err}`, 'error')
+    }
+  }
+
+  async function addDegreeRequirementCategory(data: Omit<DegreeRequirementCategory, 'id' | 'createdAt' | 'updatedAt'>) {
+    const now = nowISO()
+    const category: DegreeRequirementCategory = { ...data, id: newId('degreecat'), createdAt: now, updatedAt: now }
+    try {
+      await repository.putDegreeRequirementCategory(category)
+      setDegreeRequirementCategories((prev) => [category, ...prev])
+      return category
+    } catch (err: any) {
+      notify(`לא הצלחתי לשמור את קטגוריית הדרישות: ${err.message ?? err}`, 'error')
+      throw err
+    }
+  }
+
+  async function updateDegreeRequirementCategory(id: string, patch: Partial<DegreeRequirementCategory>) {
+    const current = degreeRequirementCategories.find((c) => c.id === id)
+    if (!current) return
+    const next: DegreeRequirementCategory = { ...current, ...patch, updatedAt: nowISO() }
+    try {
+      await repository.putDegreeRequirementCategory(next)
+      setDegreeRequirementCategories((prev) => prev.map((c) => (c.id === id ? next : c)))
+    } catch (err: any) {
+      notify(`לא הצלחתי לשמור את השינוי: ${err.message ?? err}`, 'error')
+    }
+  }
+
+  async function deleteDegreeRequirementCategory(id: string) {
+    try {
+      await repository.deleteDegreeRequirementCategory(id)
+      setDegreeRequirementCategories((prev) => prev.filter((c) => c.id !== id))
+    } catch (err: any) {
+      notify(`לא הצלחתי למחוק את הקטגוריה: ${err.message ?? err}`, 'error')
+    }
+  }
+
+  async function addStudyMaterial(data: Omit<StudyMaterial, 'id' | 'createdAt' | 'updatedAt'>) {
+    const now = nowISO()
+    const material: StudyMaterial = { ...data, id: newId('studymat'), createdAt: now, updatedAt: now }
+    try {
+      await repository.putStudyMaterial(material)
+      setStudyMaterials((prev) => [material, ...prev])
+      return material
+    } catch (err: any) {
+      notify(`לא הצלחתי לשמור את חומר הלימוד: ${err.message ?? err}`, 'error')
+      throw err
+    }
+  }
+
+  async function deleteStudyMaterial(id: string) {
+    try {
+      await repository.deleteStudyMaterial(id)
+      setStudyMaterials((prev) => prev.filter((m) => m.id !== id))
+    } catch (err: any) {
+      notify(`לא הצלחתי למחוק את חומר הלימוד: ${err.message ?? err}`, 'error')
+    }
+  }
+
   async function clearSampleData() {
     try {
       await repository.clearAll()
@@ -1030,6 +1182,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setVideoScripts([])
       setContentRules([])
       setPromotionPlans([])
+      setCourses([])
+      setGrades([])
+      setDegreeRequirementCategories([])
+      setStudyMaterials([])
       notify('כל המידע נמחק. אפשר להתחיל מחדש.', 'success')
     } catch (err: any) {
       notify(`המחיקה נכשלה: ${err.message ?? err}`, 'error')
@@ -1066,6 +1222,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       videoScripts,
       contentRules,
       promotionPlans,
+      courses,
+      grades,
+      degreeRequirementCategories,
+      studyMaterials,
       loading,
       storageAvailable,
       addItem,
@@ -1134,6 +1294,17 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       addCampaignCreative,
       updateCampaignCreative,
       deleteCampaignCreative,
+      addCourse,
+      updateCourse,
+      deleteCourse,
+      addGrade,
+      updateGrade,
+      deleteGrade,
+      addDegreeRequirementCategory,
+      updateDegreeRequirementCategory,
+      deleteDegreeRequirementCategory,
+      addStudyMaterial,
+      deleteStudyMaterial,
       clearSampleData,
       reloadFromDisk: loadAll,
     }),
@@ -1166,6 +1337,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       videoScripts,
       contentRules,
       promotionPlans,
+      courses,
+      grades,
+      degreeRequirementCategories,
+      studyMaterials,
       loading,
     ],
   )

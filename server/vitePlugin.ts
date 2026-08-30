@@ -7,6 +7,7 @@ import {
   testEmailConnection,
   sendRfqEmails,
   fetchNewEmails,
+  fetchRecentEmails,
   classifyEmailError,
   EmailConfig,
   EmailAccountId,
@@ -139,6 +140,26 @@ export function emailServerPlugin(accounts: Record<EmailAccountId, Partial<Email
             sendJson(res, 200, { results })
           } catch (err: any) {
             console.error('[email/send-rfq] failed:', err?.message ?? err)
+            const classified = classifyEmailError(err)
+            sendJson(res, 502, { error: classified.type, message: classified.message })
+          }
+          return
+        }
+
+        if (req.url === '/api/email/recent' && req.method === 'POST') {
+          try {
+            const raw = await readBody(req)
+            const body = raw ? JSON.parse(raw) : {}
+            const accountId = (body.account as EmailAccountId) ?? 'work'
+            const config = accountConfig(accountId)
+            if (!config.user || !config.appPassword) {
+              sendJson(res, 400, { error: 'no_key', message: 'חיבור תיבת המייל עדיין לא הוגדר.' })
+              return
+            }
+            const messages = await fetchRecentEmails(config as EmailConfig, body.limit)
+            sendJson(res, 200, { messages })
+          } catch (err: any) {
+            console.error('[email/recent] failed:', err?.message ?? err)
             const classified = classifyEmailError(err)
             sendJson(res, 502, { error: classified.type, message: classified.message })
           }

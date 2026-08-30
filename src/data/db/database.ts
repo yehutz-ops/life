@@ -3,7 +3,8 @@ const DB_NAME = 'life-control-center'
 // במלואו (תוצר לוואי של עריכה חיה תוך כדי בדיקה) — IndexedDB לא מפעיל onupgradeneeded שוב
 // לאותה גרסה, אז המחסנים החסרים היו נשארים לצמיתות. גרסה 6 מפעילה שוב את יצירת המחסנים
 // (idempotent בזכות בדיקות ה-contains) בלי להשפיע על נתונים קיימים.
-const DB_VERSION = 6
+// גרסה 7 מוסיפה את מחסני עמוד הלימודים (קורסים/ציונים/דרישות תואר/חומרי לימוד).
+const DB_VERSION = 7
 
 export const STORES = {
   items: 'items',
@@ -35,6 +36,10 @@ export const STORES = {
   videoScripts: 'videoScripts',
   contentRules: 'contentRules',
   promotionPlans: 'promotionPlans',
+  courses: 'courses',
+  grades: 'grades',
+  degreeRequirementCategories: 'degreeRequirementCategories',
+  studyMaterials: 'studyMaterials',
 } as const
 
 let dbPromise: Promise<IDBDatabase> | null = null
@@ -87,6 +92,11 @@ export function openDB(): Promise<IDBDatabase> {
       if (!db.objectStoreNames.contains(STORES.videoScripts)) db.createObjectStore(STORES.videoScripts, { keyPath: 'id' })
       if (!db.objectStoreNames.contains(STORES.contentRules)) db.createObjectStore(STORES.contentRules, { keyPath: 'id' })
       if (!db.objectStoreNames.contains(STORES.promotionPlans)) db.createObjectStore(STORES.promotionPlans, { keyPath: 'id' })
+      // עמוד לימודים — קורסים, ציונים, דרישות תואר לפי קטגוריה, וחומרי לימוד (קישורים בלבד).
+      if (!db.objectStoreNames.contains(STORES.courses)) db.createObjectStore(STORES.courses, { keyPath: 'id' })
+      if (!db.objectStoreNames.contains(STORES.grades)) db.createObjectStore(STORES.grades, { keyPath: 'id' })
+      if (!db.objectStoreNames.contains(STORES.degreeRequirementCategories)) db.createObjectStore(STORES.degreeRequirementCategories, { keyPath: 'id' })
+      if (!db.objectStoreNames.contains(STORES.studyMaterials)) db.createObjectStore(STORES.studyMaterials, { keyPath: 'id' })
     }
 
     req.onsuccess = () => {

@@ -132,6 +132,61 @@ const MAX_BODY_CHARS = 20000
 // קורא מיילים חדשים בלבד מ-INBOX דרך IMAP (אותו App Password כמו השליחה). לא נוגע בתיקיות/תוויות אחרות.
 // חיבור ראשון לחשבון (או שינוי UIDVALIDITY, נדיר בג'ימייל) — לא מעבד היסטוריה, רק קובע קו בסיס חדש ומחזיר 0 הודעות.
 // זו החלטה מכוונת: חיבור תיבת מייל לא סורק רטרואקטיבית מיילים ישנים (רלוונטי במיוחד לתיבה האישית עם תוכן רפואי).
+// מייל אחרון להצגה בלבד (פאנל "מיילים חדשים" בדף הבית). קריאה-בלבד: לא נשמר כלום מקומית
+// ולא נוגעים ב-syncState, כדי שהצינור שמסווג ומתייק מיילים ימשיך לעבוד בדיוק כמו קודם.
+export interface RecentEmail {
+  uid: number
+  fromName: string
+  fromAddress: string
+  subject: string
+  date: string
+  preview: string
+}
+
+const MAX_RECENT_EMAILS = 10
+const RECENT_PREVIEW_CHARS = 160
+
+export async function fetchRecentEmails(config: EmailConfig, limit = MAX_RECENT_EMAILS): Promise<RecentEmail[]> {
+  const client = new ImapFlow({
+    host: 'imap.gmail.com',
+    port: 993,
+    secure: true,
+    auth: { user: config.user, pass: config.appPassword },
+    logger: false,
+  })
+
+  await client.connect()
+  try {
+    const lock = await client.getMailboxLock('INBOX')
+    try {
+      const total = Number((client.mailbox as any)?.exists) || 0
+      if (total === 0) return []
+
+      const start = Math.max(1, total - limit + 1)
+      const out: RecentEmail[] = []
+      // שליפה לפי מספר סידורי (ולא UID) — פשוט "ה-N האחרונים בתיבה", בלי תלות בסמן הסנכרון.
+      for await (const msg of client.fetch(`${start}:${total}`, { uid: true, source: true })) {
+        const parsed = await simpleParser(msg.source as Buffer)
+        const sender = parsed.from?.value?.[0]
+        const address = sender?.address ?? ''
+        out.push({
+          uid: msg.uid,
+          fromName: sender?.name?.trim() || address.split('@')[0] || 'ללא שולח',
+          fromAddress: address,
+          subject: parsed.subject?.trim() || '(ללא נושא)',
+          date: (parsed.date ?? new Date()).toISOString(),
+          preview: (parsed.text ?? '').replace(/\s+/g, ' ').trim().slice(0, RECENT_PREVIEW_CHARS),
+        })
+      }
+      return out.sort((a, b) => b.date.localeCompare(a.date))
+    } finally {
+      lock.release()
+    }
+  } finally {
+    await client.logout()
+  }
+}
+
 export async function fetchNewEmails(config: EmailConfig, syncState?: EmailSyncState): Promise<FetchNewEmailsResult> {
   const client = new ImapFlow({
     host: 'imap.gmail.com',

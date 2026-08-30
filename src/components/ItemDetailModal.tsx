@@ -27,6 +27,13 @@ const waitingTypeOptions: { value: WaitingType; label: string }[] = [
   { value: 'my_approval', label: 'מחכה לאישור/החלטה שלי' },
 ]
 
+const studyKindOptions: { value: NonNullable<Item['studyKind']>; label: string }[] = [
+  { value: 'assignment', label: 'מטלה/תרגיל' },
+  { value: 'reading', label: 'קריאה/הכנה' },
+  { value: 'exam', label: 'מבחן/בוחן' },
+  { value: 'submission', label: 'הגשה/עבודה' },
+]
+
 const emptyForm = () => ({
   title: '',
   domain: 'work' as DomainId,
@@ -41,11 +48,13 @@ const emptyForm = () => ({
   personName: '',
   notes: '',
   category: '',
+  courseId: '',
+  studyKind: '' as '' | NonNullable<Item['studyKind']>,
 })
 
 export default function ItemDetailModal() {
   const { target, close } = useDetailModal()
-  const { items, projects, addItem, updateItem, deleteItem, sortInboxEntry } = useStore()
+  const { items, projects, courses, addItem, updateItem, deleteItem, sortInboxEntry } = useStore()
   const confirm = useConfirm()
   const [form, setForm] = useState(emptyForm())
 
@@ -68,6 +77,8 @@ export default function ItemDetailModal() {
         personName: editingItem.personName ?? '',
         notes: editingItem.notes ?? '',
         category: editingItem.category ?? '',
+        courseId: editingItem.courseId ?? '',
+        studyKind: editingItem.studyKind ?? '',
       })
     } else if (target.mode === 'create') {
       const p = target.prefill
@@ -82,6 +93,8 @@ export default function ItemDetailModal() {
         projectId: p?.projectId ?? '',
         personName: p?.personName ?? '',
         notes: p?.notes ?? '',
+        courseId: p?.courseId ?? '',
+        studyKind: p?.studyKind ?? '',
       })
     } else if (target.mode === 'sort') {
       setForm({ ...emptyForm(), title: target.prefillTitle })
@@ -112,6 +125,8 @@ export default function ItemDetailModal() {
       personName: form.personName || undefined,
       notes: form.notes || undefined,
       category: editingItem?.listType === 'bills' ? form.category || undefined : editingItem?.category,
+      courseId: form.domain === 'studies' ? form.courseId || undefined : editingItem?.courseId,
+      studyKind: form.domain === 'studies' ? form.studyKind || undefined : editingItem?.studyKind,
     }
 
     if (target?.mode === 'edit') {
@@ -219,6 +234,41 @@ export default function ItemDetailModal() {
                 </option>
               ))}
             </select>
+          </div>
+        )}
+
+        {form.domain === 'studies' && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+            <div>
+              <label className="text-xs text-stone-500 dark:text-stone-400 block mb-1">קורס (אופציונלי)</label>
+              <select
+                value={form.courseId}
+                onChange={(e) => set('courseId', e.target.value)}
+                className="w-full border border-stone-200 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100 rounded-xl p-2 text-sm"
+              >
+                <option value="">ללא קורס</option>
+                {courses.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="text-xs text-stone-500 dark:text-stone-400 block mb-1">סוג פריט לימודים (אופציונלי)</label>
+              <select
+                value={form.studyKind}
+                onChange={(e) => set('studyKind', e.target.value as typeof form.studyKind)}
+                className="w-full border border-stone-200 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100 rounded-xl p-2 text-sm"
+              >
+                <option value="">כללי</option>
+                {studyKindOptions.map((s) => (
+                  <option key={s.value} value={s.value}>
+                    {s.label}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
         )}
 

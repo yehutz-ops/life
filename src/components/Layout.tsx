@@ -11,13 +11,17 @@ import { useStore } from '../data/StoreContext'
 
 export default function Layout() {
   const [collapsed, setCollapsed] = useState(false)
-  const isHome = useLocation().pathname === '/'
+  const pathname = useLocation().pathname
+  const isHome = pathname === '/'
+  // דף הבית ועמוד הלימודים תוכננו כ-Hubs רחבים (שורת פאנלים משולשת, יומן שבועי עם רשת שעות) —
+  // לא מסתדרים בעמודה צרה כמו שאר העמודים. שינוי רוחב ממוקד לפי נתיב בלבד.
+  const isWide = pathname === '/' || pathname.startsWith('/studies')
   const { loading } = useStore()
 
   return (
     <div className="flex min-h-screen bg-[#F7F5F1] dark:bg-[#1C1A18] text-stone-900 dark:text-stone-100" dir="rtl">
       <Sidebar collapsed={collapsed} onToggle={() => setCollapsed((c) => !c)} />
-      <main className="flex-1 min-w-0 p-4 sm:p-6 lg:p-10 pb-24 md:pb-6 lg:pb-10 max-w-5xl mx-auto w-full">
+      <main className={`flex-1 min-w-0 p-4 sm:p-6 lg:p-10 pb-24 md:pb-6 lg:pb-10 mx-auto w-full ${isWide ? 'max-w-screen-2xl' : 'max-w-5xl'}`}>
         <div className="flex justify-end mb-4">
           <ThemeToggle />
         </div>

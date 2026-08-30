@@ -17,6 +17,7 @@ import ShipmentDetailPage from './pages/ShipmentDetailPage'
 // טעינה עצלה — הדף היחיד שמייבא @react-pdf/renderer, ספרייה כבדה; לא צריך לנפח את ה-bundle הראשי בשביל דף אחד.
 const NewShipmentRequestPage = lazy(() => import('./pages/NewShipmentRequestPage'))
 import HouseholdPage from './pages/HouseholdPage'
+import StudiesPage from './pages/StudiesPage'
 import PersonalPage from './pages/PersonalPage'
 import FinancePage from './pages/FinancePage'
 import KnowledgeCategoryPage from './pages/KnowledgeCategoryPage'
@@ -84,7 +85,7 @@ export default function App() {
                         <Route path="work/content-analytics" element={<ContentAnalyticsPage />} />
                         <Route path="work/creative-tools" element={<CreativeToolsPage />} />
                         <Route path="work/area/:areaId" element={<WorkAreaComingSoonPage />} />
-                        <Route path="studies" element={<DomainPage domainId="studies" />} />
+                        <Route path="studies" element={<StudiesPage />} />
                         <Route path="personal" element={<PersonalPage />} />
                         <Route path="personal/:categoryId" element={<KnowledgeCategoryPage />} />
                         <Route path="household" element={<HouseholdPage />} />

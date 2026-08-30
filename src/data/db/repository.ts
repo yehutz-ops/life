@@ -4,6 +4,7 @@ import { Influencer, InfluencerProduct, InfluencerContent, InfluencerSale } from
 import { Campaign, CampaignCreative } from '../campaignTypes'
 import { Shipment, ShipmentQuote, ShipmentDocument, ShipmentTimelineEvent, Forwarder } from '../shipmentTypes'
 import { MediaAsset, IdeaBankItem, ContentPiece, VideoScript, ContentRule, PromotionPlan } from '../contentStudioTypes'
+import { Course, Grade, DegreeRequirementCategory, StudyMaterial } from '../studyTypes'
 import { STORES, getAll, put, remove, clearStore, getMeta, setMeta } from './database'
 
 export const repository = {
@@ -119,6 +120,22 @@ export const repository = {
   putPromotionPlan: (plan: PromotionPlan) => put(STORES.promotionPlans, plan),
   deletePromotionPlan: (id: string) => remove(STORES.promotionPlans, id),
 
+  getAllCourses: () => getAll<Course>(STORES.courses),
+  putCourse: (course: Course) => put(STORES.courses, course),
+  deleteCourse: (id: string) => remove(STORES.courses, id),
+
+  getAllGrades: () => getAll<Grade>(STORES.grades),
+  putGrade: (grade: Grade) => put(STORES.grades, grade),
+  deleteGrade: (id: string) => remove(STORES.grades, id),
+
+  getAllDegreeRequirementCategories: () => getAll<DegreeRequirementCategory>(STORES.degreeRequirementCategories),
+  putDegreeRequirementCategory: (category: DegreeRequirementCategory) => put(STORES.degreeRequirementCategories, category),
+  deleteDegreeRequirementCategory: (id: string) => remove(STORES.degreeRequirementCategories, id),
+
+  getAllStudyMaterials: () => getAll<StudyMaterial>(STORES.studyMaterials),
+  putStudyMaterial: (material: StudyMaterial) => put(STORES.studyMaterials, material),
+  deleteStudyMaterial: (id: string) => remove(STORES.studyMaterials, id),
+
   clearAll: async () => {
     await clearStore(STORES.items)
     await clearStore(STORES.projects)
@@ -148,6 +165,10 @@ export const repository = {
     await clearStore(STORES.videoScripts)
     await clearStore(STORES.contentRules)
     await clearStore(STORES.promotionPlans)
+    await clearStore(STORES.courses)
+    await clearStore(STORES.grades)
+    await clearStore(STORES.degreeRequirementCategories)
+    await clearStore(STORES.studyMaterials)
     await setMeta('seeded', 'true')
   },
 
