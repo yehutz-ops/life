@@ -1,6 +1,7 @@
 import nodemailer from 'nodemailer'
 import { ImapFlow } from 'imapflow'
 import { simpleParser } from 'mailparser'
+import MailComposer from 'nodemailer/lib/mail-composer/index.js'
 
 export type EmailErrorType = 'auth' | 'invalid_recipient' | 'network' | 'server' | 'unknown'
 export type EmailAccountId = 'work' | 'personal'
@@ -81,6 +82,8 @@ export interface RfqEmailResult {
   name: string
   email: string
   success: boolean
+  // Message-ID של המייל היוצא, לזיהוי תשובות באותו שרשור.
+  messageId?: string
   error?: ClassifiedEmailError
 }
 
@@ -92,14 +95,15 @@ export async function sendRfqEmails(config: EmailConfig, req: SendRfqEmailsReque
   const results: RfqEmailResult[] = []
   for (const agency of req.agencies) {
     try {
-      await transporter.sendMail({
+      const info = await transporter.sendMail({
         from: config.user,
         to: agency.email,
         subject: req.subject,
         text: req.body,
         attachments,
       })
-      results.push({ agencyId: agency.agencyId, name: agency.name, email: agency.email, success: true })
+      // messageId של המייל היוצא נשמר אצלנו — זה מה שמאפשר לזהות תשובה כ"אותו שרשור".
+      results.push({ agencyId: agency.agencyId, name: agency.name, email: agency.email, success: true, messageId: (info as any)?.messageId })
     } catch (err) {
       console.error(`[email/send-rfq] failed for ${agency.email}:`, (err as any)?.message ?? err)
       results.push({ agencyId: agency.agencyId, name: agency.name, email: agency.email, success: false, error: classifyEmailError(err) })
@@ -116,9 +120,16 @@ export interface EmailSyncState {
 export interface ParsedIncomingEmail {
   uid: number
   from: string
+  fromAddress?: string
   subject: string
   date: string
   text: string
+  // מזהי שרשור — הבסיס לזיהוי "האם זו תשובה ל-RFQ ששלחנו".
+  messageId?: string
+  inReplyTo?: string
+  references?: string[]
+  // רק שמות/סוגים. הקבצים עצמם נמשכים בנפרד ורק כשצריך, ראו fetchEmailMessage.
+  attachments?: { fileName: string; mediaType: string; size: number }[]
 }
 
 export interface FetchNewEmailsResult {
@@ -128,6 +139,126 @@ export interface FetchNewEmailsResult {
 
 const MAX_MESSAGES_PER_CHECK = 20
 const MAX_BODY_CHARS = 20000
+// תקרה לקבצים מצורפים שנשלחים לניתוח — מגן על הזיכרון ועל גודל הבקשה ל-Claude.
+const MAX_ATTACHMENT_BYTES = 4 * 1024 * 1024
+const MAX_ATTACHMENTS_PER_MESSAGE = 4
+
+function normalizeReferences(refs: unknown): string[] {
+  if (Array.isArray(refs)) return refs.filter((r): r is string => typeof r === 'string')
+  if (typeof refs === 'string') return [refs]
+  return []
+}
+
+export interface FullIncomingEmail extends ParsedIncomingEmail {
+  attachmentData: { fileName: string; mediaType: string; base64: string }[]
+}
+
+// שליפת הודעה בודדת לפי UID, כולל הקבצים המצורפים — נקראת רק אחרי שהמייל שויך ל-RFQ,
+// כדי לא למשוך קבצים כבדים עבור כל מייל נכנס.
+export async function fetchEmailMessage(config: EmailConfig, uid: number): Promise<FullIncomingEmail | null> {
+  const client = new ImapFlow({
+    host: 'imap.gmail.com',
+    port: 993,
+    secure: true,
+    auth: { user: config.user, pass: config.appPassword },
+    logger: false,
+  })
+
+  await client.connect()
+  try {
+    const lock = await client.getMailboxLock('INBOX')
+    try {
+      const msg = await client.fetchOne(String(uid), { uid: true, source: true }, { uid: true })
+      if (!msg || !(msg as any).source) return null
+      const parsed = await simpleParser((msg as any).source as Buffer)
+
+      const attachmentData: FullIncomingEmail['attachmentData'] = []
+      for (const a of (parsed.attachments ?? []) as any[]) {
+        if (attachmentData.length >= MAX_ATTACHMENTS_PER_MESSAGE) break
+        const content: Buffer | undefined = a.content
+        if (!content || content.length > MAX_ATTACHMENT_BYTES) continue
+        attachmentData.push({
+          fileName: a.filename ?? 'attachment',
+          mediaType: a.contentType ?? '',
+          base64: content.toString('base64'),
+        })
+      }
+
+      return {
+        uid,
+        from: parsed.from?.text ?? '',
+        fromAddress: parsed.from?.value?.[0]?.address ?? undefined,
+        subject: parsed.subject ?? '',
+        date: (parsed.date ?? new Date()).toISOString(),
+        text: (parsed.text ?? '').slice(0, MAX_BODY_CHARS),
+        messageId: parsed.messageId ?? undefined,
+        inReplyTo: parsed.inReplyTo ?? undefined,
+        references: normalizeReferences(parsed.references),
+        attachments: (parsed.attachments ?? []).map((a: any) => ({
+          fileName: a.filename ?? 'attachment',
+          mediaType: a.contentType ?? '',
+          size: a.size ?? 0,
+        })),
+        attachmentData,
+      }
+    } finally {
+      lock.release()
+    }
+  } finally {
+    await client.logout()
+  }
+}
+
+export interface SaveDraftRequest {
+  to: string
+  subject: string
+  body: string
+  inReplyTo?: string
+  references?: string[]
+}
+
+// שומר טיוטת תשובה בתיקיית הטיוטות של Gmail — ולעולם לא שולח.
+// המשתמש פותח את הטיוטה ב-Gmail, בודק ושולח בעצמו. זו דרישה מפורשת: אין שליחה בלי אישור.
+export async function saveDraftReply(config: EmailConfig, req: SaveDraftRequest): Promise<{ folder: string }> {
+  const composer = new MailComposer({
+    from: config.user,
+    to: req.to,
+    subject: req.subject,
+    text: req.body,
+    inReplyTo: req.inReplyTo,
+    references: req.references,
+  })
+  const raw: Buffer = await new Promise((resolve, reject) => {
+    composer.compile().build((err: Error | null, message: Buffer) => (err ? reject(err) : resolve(message)))
+  })
+
+  const client = new ImapFlow({
+    host: 'imap.gmail.com',
+    port: 993,
+    secure: true,
+    auth: { user: config.user, pass: config.appPassword },
+    logger: false,
+  })
+  await client.connect()
+  try {
+    // שם תיקיית הטיוטות משתנה לפי שפת הממשק של החשבון — מאתרים אותה לפי הדגל הסטנדרטי.
+    let folder = '[Gmail]/Drafts'
+    try {
+      for (const box of await client.list()) {
+        if ((box as any).specialUse === '\\Drafts') {
+          folder = box.path
+          break
+        }
+      }
+    } catch {
+      /* נשארים עם ברירת המחדל */
+    }
+    await client.append(folder, raw, ['\\Draft'])
+    return { folder }
+  } finally {
+    await client.logout()
+  }
+}
 
 // קורא מיילים חדשים בלבד מ-INBOX דרך IMAP (אותו App Password כמו השליחה). לא נוגע בתיקיות/תוויות אחרות.
 // חיבור ראשון לחשבון (או שינוי UIDVALIDITY, נדיר בג'ימייל) — לא מעבד היסטוריה, רק קובע קו בסיס חדש ומחזיר 0 הודעות.
@@ -219,9 +350,18 @@ export async function fetchNewEmails(config: EmailConfig, syncState?: EmailSyncS
         messages.push({
           uid: msg.uid,
           from: parsed.from?.text ?? '',
+          fromAddress: parsed.from?.value?.[0]?.address ?? undefined,
           subject: parsed.subject ?? '',
           date: (parsed.date ?? new Date()).toISOString(),
           text: (parsed.text ?? '').slice(0, MAX_BODY_CHARS),
+          messageId: parsed.messageId ?? undefined,
+          inReplyTo: parsed.inReplyTo ?? undefined,
+          references: normalizeReferences(parsed.references),
+          attachments: (parsed.attachments ?? []).map((a: any) => ({
+            fileName: a.filename ?? 'attachment',
+            mediaType: a.contentType ?? '',
+            size: a.size ?? 0,
+          })),
         })
         lastUid = msg.uid
         count++

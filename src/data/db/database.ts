@@ -4,7 +4,8 @@ const DB_NAME = 'life-control-center'
 // לאותה גרסה, אז המחסנים החסרים היו נשארים לצמיתות. גרסה 6 מפעילה שוב את יצירת המחסנים
 // (idempotent בזכות בדיקות ה-contains) בלי להשפיע על נתונים קיימים.
 // גרסה 7 מוסיפה את מחסני עמוד הלימודים (קורסים/ציונים/דרישות תואר/חומרי לימוד).
-const DB_VERSION = 7
+// גרסה 8 מוסיפה את מחסני ה-RFQ (שליחות לסוכנויות + מיילים שלא שויכו).
+const DB_VERSION = 8
 
 export const STORES = {
   items: 'items',
@@ -40,6 +41,8 @@ export const STORES = {
   grades: 'grades',
   degreeRequirementCategories: 'degreeRequirementCategories',
   studyMaterials: 'studyMaterials',
+  rfqDispatches: 'rfqDispatches',
+  rfqUnmatchedEmails: 'rfqUnmatchedEmails',
 } as const
 
 let dbPromise: Promise<IDBDatabase> | null = null
@@ -97,6 +100,9 @@ export function openDB(): Promise<IDBDatabase> {
       if (!db.objectStoreNames.contains(STORES.grades)) db.createObjectStore(STORES.grades, { keyPath: 'id' })
       if (!db.objectStoreNames.contains(STORES.degreeRequirementCategories)) db.createObjectStore(STORES.degreeRequirementCategories, { keyPath: 'id' })
       if (!db.objectStoreNames.contains(STORES.studyMaterials)) db.createObjectStore(STORES.studyMaterials, { keyPath: 'id' })
+      // RFQ — למי נשלחה כל בקשה, ומיילים נכנסים שלא ניתן היה לשייך בוודאות.
+      if (!db.objectStoreNames.contains(STORES.rfqDispatches)) db.createObjectStore(STORES.rfqDispatches, { keyPath: 'id' })
+      if (!db.objectStoreNames.contains(STORES.rfqUnmatchedEmails)) db.createObjectStore(STORES.rfqUnmatchedEmails, { keyPath: 'id' })
     }
 
     req.onsuccess = () => {

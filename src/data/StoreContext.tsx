@@ -6,6 +6,7 @@ import { Campaign, CampaignCreative } from './campaignTypes'
 import { Shipment, ShipmentQuote, ShipmentDocument, ShipmentTimelineEvent, Forwarder } from './shipmentTypes'
 import { MediaAsset, IdeaBankItem, ContentPiece, VideoScript, ContentRule, PromotionPlan } from './contentStudioTypes'
 import { Course, Grade, DegreeRequirementCategory, StudyMaterial } from './studyTypes'
+import { RfqDispatch, RfqUnmatchedEmail } from './rfqTypes'
 import { repository } from './db/repository'
 import { seedIfEmpty } from './db/seed'
 import { isIndexedDBAvailable } from './db/database'
@@ -48,6 +49,8 @@ interface StoreValue {
   grades: Grade[]
   degreeRequirementCategories: DegreeRequirementCategory[]
   studyMaterials: StudyMaterial[]
+  rfqDispatches: RfqDispatch[]
+  rfqUnmatchedEmails: RfqUnmatchedEmail[]
   loading: boolean
   storageAvailable: boolean
   addItem: (data: Omit<Item, 'id' | 'createdAt' | 'updatedAt'>) => Promise<Item>
@@ -135,6 +138,11 @@ interface StoreValue {
   deleteDegreeRequirementCategory: (id: string) => Promise<void>
   addStudyMaterial: (data: Omit<StudyMaterial, 'id' | 'createdAt' | 'updatedAt'>) => Promise<StudyMaterial>
   deleteStudyMaterial: (id: string) => Promise<void>
+  addRfqDispatch: (data: Omit<RfqDispatch, 'id' | 'createdAt' | 'updatedAt'>) => Promise<RfqDispatch>
+  updateRfqDispatch: (id: string, patch: Partial<RfqDispatch>) => Promise<void>
+  addRfqUnmatchedEmail: (data: Omit<RfqUnmatchedEmail, 'id' | 'createdAt'>) => Promise<RfqUnmatchedEmail>
+  updateRfqUnmatchedEmail: (id: string, patch: Partial<RfqUnmatchedEmail>) => Promise<void>
+  deleteRfqUnmatchedEmail: (id: string) => Promise<void>
   clearSampleData: () => Promise<void>
   reloadFromDisk: () => Promise<void>
 }
@@ -174,12 +182,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [grades, setGrades] = useState<Grade[]>([])
   const [degreeRequirementCategories, setDegreeRequirementCategories] = useState<DegreeRequirementCategory[]>([])
   const [studyMaterials, setStudyMaterials] = useState<StudyMaterial[]>([])
+  const [rfqDispatches, setRfqDispatches] = useState<RfqDispatch[]>([])
+  const [rfqUnmatchedEmails, setRfqUnmatchedEmails] = useState<RfqUnmatchedEmail[]>([])
   const [loading, setLoading] = useState(true)
   const storageAvailable = isIndexedDBAvailable()
   const notify = useNotify()
 
   async function loadAll() {
-    const [i, p, ib, br, bp, bc, bci, bpa, bma, inf, infp, infc, infs, camp, campc, sh, shq, shd, shte, fw, bcn, bdc, cma, ibi, cp, vs, cr, pp, crs, grd, drc, sm] = await Promise.all([
+    const [i, p, ib, br, bp, bc, bci, bpa, bma, inf, infp, infc, infs, camp, campc, sh, shq, shd, shte, fw, bcn, bdc, cma, ibi, cp, vs, cr, pp, crs, grd, drc, sm, rfqd, rfqu] = await Promise.all([
       repository.getAllItems(),
       repository.getAllProjects(),
       repository.getAllInboxEntries(),
@@ -212,6 +222,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       repository.getAllGrades(),
       repository.getAllDegreeRequirementCategories(),
       repository.getAllStudyMaterials(),
+      repository.getAllRfqDispatches(),
+      repository.getAllRfqUnmatchedEmails(),
     ])
     setItems(i)
     setProjects(p)
@@ -245,6 +257,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setGrades(grd)
     setDegreeRequirementCategories(drc)
     setStudyMaterials(sm)
+    setRfqDispatches(rfqd)
+    setRfqUnmatchedEmails(rfqu)
   }
 
   useEffect(() => {
@@ -1151,6 +1165,64 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  async function addRfqDispatch(data: Omit<RfqDispatch, 'id' | 'createdAt' | 'updatedAt'>) {
+    const now = nowISO()
+    const dispatch: RfqDispatch = { ...data, id: newId('rfqdisp'), createdAt: now, updatedAt: now }
+    try {
+      await repository.putRfqDispatch(dispatch)
+      setRfqDispatches((prev) => [dispatch, ...prev])
+      return dispatch
+    } catch (err: any) {
+      notify(`לא הצלחתי לשמור את רשומת השליחה: ${err.message ?? err}`, 'error')
+      throw err
+    }
+  }
+
+  async function updateRfqDispatch(id: string, patch: Partial<RfqDispatch>) {
+    const current = rfqDispatches.find((d) => d.id === id)
+    if (!current) return
+    const next: RfqDispatch = { ...current, ...patch, updatedAt: nowISO() }
+    try {
+      await repository.putRfqDispatch(next)
+      setRfqDispatches((prev) => prev.map((d) => (d.id === id ? next : d)))
+    } catch (err: any) {
+      notify(`לא הצלחתי לשמור את השינוי: ${err.message ?? err}`, 'error')
+    }
+  }
+
+  async function addRfqUnmatchedEmail(data: Omit<RfqUnmatchedEmail, 'id' | 'createdAt'>) {
+    const entry: RfqUnmatchedEmail = { ...data, id: newId('rfqmail'), createdAt: nowISO() }
+    try {
+      await repository.putRfqUnmatchedEmail(entry)
+      setRfqUnmatchedEmails((prev) => [entry, ...prev])
+      return entry
+    } catch (err: any) {
+      notify(`לא הצלחתי לשמור את המייל לבדיקה: ${err.message ?? err}`, 'error')
+      throw err
+    }
+  }
+
+  async function updateRfqUnmatchedEmail(id: string, patch: Partial<RfqUnmatchedEmail>) {
+    const current = rfqUnmatchedEmails.find((e) => e.id === id)
+    if (!current) return
+    const next: RfqUnmatchedEmail = { ...current, ...patch }
+    try {
+      await repository.putRfqUnmatchedEmail(next)
+      setRfqUnmatchedEmails((prev) => prev.map((e) => (e.id === id ? next : e)))
+    } catch (err: any) {
+      notify(`לא הצלחתי לשמור את השינוי: ${err.message ?? err}`, 'error')
+    }
+  }
+
+  async function deleteRfqUnmatchedEmail(id: string) {
+    try {
+      await repository.deleteRfqUnmatchedEmail(id)
+      setRfqUnmatchedEmails((prev) => prev.filter((e) => e.id !== id))
+    } catch (err: any) {
+      notify(`לא הצלחתי למחוק: ${err.message ?? err}`, 'error')
+    }
+  }
+
   async function clearSampleData() {
     try {
       await repository.clearAll()
@@ -1186,6 +1258,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setGrades([])
       setDegreeRequirementCategories([])
       setStudyMaterials([])
+      setRfqDispatches([])
+      setRfqUnmatchedEmails([])
       notify('כל המידע נמחק. אפשר להתחיל מחדש.', 'success')
     } catch (err: any) {
       notify(`המחיקה נכשלה: ${err.message ?? err}`, 'error')
@@ -1226,6 +1300,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       grades,
       degreeRequirementCategories,
       studyMaterials,
+      rfqDispatches,
+      rfqUnmatchedEmails,
       loading,
       storageAvailable,
       addItem,
@@ -1305,6 +1381,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       deleteDegreeRequirementCategory,
       addStudyMaterial,
       deleteStudyMaterial,
+      addRfqDispatch,
+      updateRfqDispatch,
+      addRfqUnmatchedEmail,
+      updateRfqUnmatchedEmail,
+      deleteRfqUnmatchedEmail,
       clearSampleData,
       reloadFromDisk: loadAll,
     }),
@@ -1341,6 +1422,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       grades,
       degreeRequirementCategories,
       studyMaterials,
+      rfqDispatches,
+      rfqUnmatchedEmails,
       loading,
     ],
   )

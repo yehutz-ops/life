@@ -17,6 +17,7 @@ export interface RfqEmailResult {
   name: string
   email: string
   success: boolean
+  messageId?: string
   error?: { type: string; message: string }
 }
 

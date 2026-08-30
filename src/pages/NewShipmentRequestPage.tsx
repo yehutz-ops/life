@@ -15,6 +15,8 @@ import { getAiEnabled } from '../ai/aiSettings'
 import { checkAiHealth } from '../ai/aiClient'
 import { extractShipmentDetails, ShipmentExtractError, ShipmentExtractResult, ShipmentFieldResult } from '../ai/shipmentExtract'
 import { checkEmailHealth, sendRfqEmails, RfqEmailError, RfqEmailResult } from '../email/sendRfqEmail'
+import { nextRfqReference } from '../rfq/rfqReference'
+import { DispatchStatus } from '../data/rfqTypes'
 
 const SHIPPING_MODE_LABEL: Record<ShippingMode, string> = { air: 'אווירי', sea: 'ימי', other: 'אחר' }
 
@@ -143,8 +145,9 @@ function formatFileSize(bytes: number): string {
   return `${(bytes / 1024 / 1024).toFixed(1)} MB`
 }
 
-function buildSubject(form: FormState): string {
-  return `בקשה להצעת מחיר למשלוח – ${form.name.trim() || 'משלוח חדש'}`
+// מזהה ה-RFQ נכלל בנושא במכוון — הוא העוגן שמאפשר לזהות תשובה חוזרת גם כשאין מזהה שרשור.
+function buildSubject(form: FormState, rfqReference: string): string {
+  return `[${rfqReference}] בקשה להצעת מחיר למשלוח – ${form.name.trim() || 'משלוח חדש'}`
 }
 
 // גוף המייל נשאר קצר וקבוע — כל פרטי המשלוח מופיעים רק ב-PDF המצורף (RfqPdfDocument), לא בגוף ההודעה.
@@ -170,12 +173,14 @@ const AGENCY_FIELDS: QuickAddField[] = [
 ]
 
 export default function NewShipmentRequestPage() {
-  const { forwarders, addForwarder, updateForwarder, addShipment, addShipmentDocument, addShipmentTimelineEvent } = useStore()
+  const { forwarders, shipments, addForwarder, updateForwarder, addShipment, addShipmentDocument, addShipmentTimelineEvent, addRfqDispatch } = useStore()
   const notify = useNotify()
   const navigate = useNavigate()
   const confirm = useConfirm()
 
   const [form, setForm] = useState<FormState>(EMPTY_FORM)
+  // המזהה נקבע פעם אחת בכניסה למסך, כדי שיופיע כבר בתצוגה המקדימה של הנושא ושל ה-PDF.
+  const [rfqReference] = useState(() => nextRfqReference(shipments))
   const [docs, setDocs] = useState<LocalDoc[]>([])
   const fileInputRefs = useRef<Record<ShipmentDocCategory, HTMLInputElement | null>>({} as Record<ShipmentDocCategory, HTMLInputElement | null>)
 
@@ -197,6 +202,7 @@ export default function NewShipmentRequestPage() {
 
   const pdfData: RfqPdfData = useMemo(
     () => ({
+      rfqReference,
       name: form.name,
       originCountry: form.originCountry,
       originCity: form.originCity,
@@ -214,7 +220,7 @@ export default function NewShipmentRequestPage() {
       goodsType: form.goodsType,
       isDangerousGoods: form.isDangerousGoods,
     }),
-    [form],
+    [form, rfqReference],
   )
   const pdfDocuments: RfqPdfDocumentFile[] = useMemo(
     () => docs.map((d) => ({ category: PDF_DOC_CATEGORY_LABEL[d.category], fileName: d.file.name })),
@@ -225,13 +231,13 @@ export default function NewShipmentRequestPage() {
   const [manualSelectedIds, setManualSelectedIds] = useState<string[]>([])
   const [agencyModal, setAgencyModal] = useState<{ open: boolean; editingId?: string }>({ open: false })
 
-  const [subject, setSubject] = useState(buildSubject(EMPTY_FORM))
+  const [subject, setSubject] = useState(() => buildSubject(EMPTY_FORM, rfqReference))
   const [body, setBody] = useState(buildBody(EMPTY_FORM, []))
   const [subjectEdited, setSubjectEdited] = useState(false)
   const [bodyEdited, setBodyEdited] = useState(false)
 
   useEffect(() => {
-    if (!subjectEdited) setSubject(buildSubject(form))
+    if (!subjectEdited) setSubject(buildSubject(form, rfqReference))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form.name, subjectEdited])
 
@@ -350,6 +356,29 @@ export default function NewShipmentRequestPage() {
     await updateForwarder(f.id, { active: f.active === false })
   }
 
+  // רשומת שליחה אחת לכל סוכנות. גם כשלא נשלח מייל בפועל נשמרת רשומה עם status='not_sent',
+  // כדי שפאנל "סטטוס כל הסוכנויות" ישקף את המצב האמיתי ולא ייגזר מניחוש.
+  async function recordDispatches(shipmentId: string, results: RfqEmailResult[] | null) {
+    await Promise.all(
+      selectedForwarders.map((f) => {
+        const r = results?.find((x) => x.agencyId === f.id)
+        const status: DispatchStatus = r ? (r.success ? 'sent' : 'failed') : 'not_sent'
+        return addRfqDispatch({
+          shipmentId,
+          forwarderId: f.id,
+          forwarderName: f.name,
+          recipientEmail: f.email ?? '',
+          subject,
+          rfqReference,
+          sentAt: r?.success ? new Date().toISOString() : undefined,
+          status,
+          messageId: r?.messageId,
+          errorMessage: r?.error?.message,
+        })
+      }),
+    )
+  }
+
   async function handleReady() {
     if (!form.name.trim()) {
       notify('נא להזין שם/כותרת למשלוח', 'error')
@@ -361,6 +390,7 @@ export default function NewShipmentRequestPage() {
     }
 
     const shipment = await addShipment({
+      rfqReference,
       name: form.name.trim(),
       originCountry: form.originCountry.trim() || undefined,
       originCity: form.originCity.trim() || undefined,
@@ -381,6 +411,13 @@ export default function NewShipmentRequestPage() {
       notes: form.notes.trim() || undefined,
       requestedForwarderIds: selectedForwarders.map((f) => f.id),
       status: 'waiting_for_quotes',
+    })
+
+    await addShipmentTimelineEvent({
+      shipmentId: shipment.id,
+      stage: 'rfq_created',
+      date: todayISO(),
+      notes: `${rfqReference} נוצרה עבור ${selectedForwarders.length} סוכנויות`,
     })
 
     await Promise.all(
@@ -405,6 +442,7 @@ export default function NewShipmentRequestPage() {
         date: todayISO(),
         notes: `בקשת הצעת מחיר הוכנה עבור: ${selectedForwarders.map((f) => f.name).join(', ')}`,
       })
+      await recordDispatches(shipment.id, null)
       notify('הבקשה נשמרה ומוכנה לשליחה. חיבור תיבת המייל של המערכת יאפשר שליחה אוטומטית בעתיד.', 'success')
       navigate(`/work/shipments/${shipment.id}`)
       return
@@ -423,6 +461,7 @@ export default function NewShipmentRequestPage() {
         date: todayISO(),
         notes: `בקשת הצעת מחיר הוכנה עבור: ${selectedForwarders.map((f) => f.name).join(', ')} — טרם נשלחה`,
       })
+      await recordDispatches(shipment.id, null)
       notify('הבקשה נשמרה. לא נשלח מייל כרגע.', 'info')
       navigate(`/work/shipments/${shipment.id}`)
       return
@@ -435,6 +474,7 @@ export default function NewShipmentRequestPage() {
       // ה-PDF (RfqPdfDocument) הוא המסמך שנושא את כל פרטי המשלוח — גוף המייל עצמו נשאר קצר וקבוע.
       const pdfBlob = await pdf(<RfqPdfDocument data={pdfData} documents={pdfDocuments} />).toBlob()
       const pdfAttachment = { fileName: `RFQ-${form.name.trim() || 'shipment'}.pdf`, mediaType: 'application/pdf', base64: await fileToBase64(pdfBlob) }
+      await addShipmentTimelineEvent({ shipmentId: shipment.id, stage: 'rfq_pdf_generated', date: todayISO(), notes: `מסמך ${rfqReference} נוצר` })
       const docAttachments = await Promise.all(docs.map(async (d) => ({ fileName: d.file.name, mediaType: d.file.type, base64: await fileToBase64(d.file) })))
       const attachments = [pdfAttachment, ...docAttachments]
 
@@ -446,6 +486,8 @@ export default function NewShipmentRequestPage() {
             attachments,
           )
         : []
+
+      await recordDispatches(shipment.id, results)
 
       const succeeded = results.filter((r) => r.success)
       const failed = results.filter((r) => !r.success)
@@ -471,6 +513,7 @@ export default function NewShipmentRequestPage() {
         date: todayISO(),
         notes: `בקשת הצעת מחיר הוכנה עבור: ${selectedForwarders.map((f) => f.name).join(', ')} — השליחה נכשלה`,
       })
+      await recordDispatches(shipment.id, null)
       notify(err instanceof RfqEmailError ? err.message : 'השליחה נכשלה. הבקשה נשמרה מקומית.', 'error')
     } finally {
       setSending(false)

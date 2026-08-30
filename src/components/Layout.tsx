@@ -15,7 +15,7 @@ export default function Layout() {
   const isHome = pathname === '/'
   // דף הבית ועמוד הלימודים תוכננו כ-Hubs רחבים (שורת פאנלים משולשת, יומן שבועי עם רשת שעות) —
   // לא מסתדרים בעמודה צרה כמו שאר העמודים. שינוי רוחב ממוקד לפי נתיב בלבד.
-  const isWide = pathname === '/' || pathname.startsWith('/studies')
+  const isWide = pathname === '/' || pathname.startsWith('/studies') || pathname.endsWith('/rfq')
   const { loading } = useStore()
 
   return (

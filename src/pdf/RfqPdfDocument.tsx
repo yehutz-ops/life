@@ -12,6 +12,8 @@ Font.register({
 })
 
 export interface RfqPdfData {
+  // מזהה ה-RFQ (RFQ-2026-014). מופיע גם בנושא המייל וגם ברשומה, ומשמש לזיהוי תשובות חוזרות.
+  rfqReference: string
   name: string
   originCountry: string
   originCity: string
@@ -86,7 +88,11 @@ export function RfqPdfDocument({ data, documents }: { data: RfqPdfData; document
             <Text style={styles.metaValue}>{todayISO()}</Text>
           </View>
           <View>
-            <Text style={styles.metaLabel}>Reference</Text>
+            <Text style={styles.metaLabel}>RFQ Reference</Text>
+            <Text style={styles.metaValue}>{fmt(data.rfqReference)}</Text>
+          </View>
+          <View>
+            <Text style={styles.metaLabel}>Shipment</Text>
             <Text style={styles.metaValue}>{fmt(data.name)}</Text>
           </View>
         </View>

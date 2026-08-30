@@ -1,3 +1,5 @@
+import { QuoteExtraction, QuoteFieldMeta, QuoteSourceEmail, MatchMethod } from './rfqTypes'
+
 export type ShipmentStatus =
   | 'preparing'
   | 'waiting_for_quotes'
@@ -15,6 +17,9 @@ export type ShippingMode = 'air' | 'sea' | 'other'
 export interface Shipment {
   id: string
   brandId?: string
+  // מזהה RFQ ייחודי וקריא (לדוגמה RFQ-2026-014). מופיע בנושא המייל, ב-PDF וברשומה עצמה,
+  // ומשמש לזיהוי תשובות חוזרות. אופציונלי כדי שמשלוחים שנוצרו לפני כן ימשיכו לעבוד.
+  rfqReference?: string
   name?: string // כותרת/שם למשלוח, לדוגמה לבקשת הצעת מחיר
   supplierName?: string // טקסט חופשי כשאין עדיין רשומת מותג/ספק מקושרת
   originCountry?: string
@@ -60,6 +65,18 @@ export interface ShipmentQuote {
   status: QuoteStatus
   createdAt: string
   updatedAt: string
+  // --- הרחבת RFQ (הכל אופציונלי; הצעות שהוזנו ידנית ממשיכות לעבוד בלי השדות האלה) ---
+  forwarderId?: string
+  // כל תשובה של סוכנות היא רשומה נפרדת. גרסה חדשה לא דורסת קודמת: v1, v2, v3...
+  // isCurrent מסמן את הגרסה האחרונה של אותה סוכנות באותו RFQ.
+  version?: number
+  isCurrent?: boolean
+  extraction?: QuoteExtraction
+  fieldMeta?: Record<string, QuoteFieldMeta>
+  sourceEmail?: QuoteSourceEmail
+  matchMethod?: MatchMethod
+  matchConfidence?: number
+  extractedAt?: string
 }
 
 export type ShipmentDocCategory = 'invoice' | 'packing_list' | 'msds_sds' | 'awb' | 'dangerous_goods' | 'customs' | 'other'
@@ -81,8 +98,12 @@ export interface ShipmentDocument {
 }
 
 export type ShipmentTimelineStage =
+  | 'rfq_created'
+  | 'rfq_pdf_generated'
   | 'rfq_sent'
   | 'quote_received'
+  | 'quote_revised'
+  | 'followup_requested'
   | 'quote_selected'
   | 'pickup_booked'
   | 'collected'
