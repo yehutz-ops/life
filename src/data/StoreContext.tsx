@@ -7,6 +7,7 @@ import { Shipment, ShipmentQuote, ShipmentDocument, ShipmentTimelineEvent, Forwa
 import { MediaAsset, IdeaBankItem, ContentPiece, VideoScript, ContentRule, PromotionPlan } from './contentStudioTypes'
 import { Course, Grade, DegreeRequirementCategory, StudyMaterial } from './studyTypes'
 import { RfqDispatch, RfqUnmatchedEmail } from './rfqTypes'
+import { ShipmentInvoice, ShipmentPayment } from './shipmentFinanceTypes'
 import { repository } from './db/repository'
 import { seedIfEmpty } from './db/seed'
 import { isIndexedDBAvailable } from './db/database'
@@ -51,6 +52,8 @@ interface StoreValue {
   studyMaterials: StudyMaterial[]
   rfqDispatches: RfqDispatch[]
   rfqUnmatchedEmails: RfqUnmatchedEmail[]
+  shipmentInvoices: ShipmentInvoice[]
+  shipmentPayments: ShipmentPayment[]
   loading: boolean
   storageAvailable: boolean
   addItem: (data: Omit<Item, 'id' | 'createdAt' | 'updatedAt'>) => Promise<Item>
@@ -143,6 +146,11 @@ interface StoreValue {
   addRfqUnmatchedEmail: (data: Omit<RfqUnmatchedEmail, 'id' | 'createdAt'>) => Promise<RfqUnmatchedEmail>
   updateRfqUnmatchedEmail: (id: string, patch: Partial<RfqUnmatchedEmail>) => Promise<void>
   deleteRfqUnmatchedEmail: (id: string) => Promise<void>
+  addShipmentInvoice: (data: Omit<ShipmentInvoice, 'id' | 'createdAt' | 'updatedAt'>) => Promise<ShipmentInvoice>
+  updateShipmentInvoice: (id: string, patch: Partial<ShipmentInvoice>) => Promise<void>
+  deleteShipmentInvoice: (id: string) => Promise<void>
+  addShipmentPayment: (data: Omit<ShipmentPayment, 'id' | 'createdAt' | 'updatedAt'>) => Promise<ShipmentPayment>
+  deleteShipmentPayment: (id: string) => Promise<void>
   clearSampleData: () => Promise<void>
   reloadFromDisk: () => Promise<void>
 }
@@ -184,12 +192,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [studyMaterials, setStudyMaterials] = useState<StudyMaterial[]>([])
   const [rfqDispatches, setRfqDispatches] = useState<RfqDispatch[]>([])
   const [rfqUnmatchedEmails, setRfqUnmatchedEmails] = useState<RfqUnmatchedEmail[]>([])
+  const [shipmentInvoices, setShipmentInvoices] = useState<ShipmentInvoice[]>([])
+  const [shipmentPayments, setShipmentPayments] = useState<ShipmentPayment[]>([])
   const [loading, setLoading] = useState(true)
   const storageAvailable = isIndexedDBAvailable()
   const notify = useNotify()
 
   async function loadAll() {
-    const [i, p, ib, br, bp, bc, bci, bpa, bma, inf, infp, infc, infs, camp, campc, sh, shq, shd, shte, fw, bcn, bdc, cma, ibi, cp, vs, cr, pp, crs, grd, drc, sm, rfqd, rfqu] = await Promise.all([
+    const [i, p, ib, br, bp, bc, bci, bpa, bma, inf, infp, infc, infs, camp, campc, sh, shq, shd, shte, fw, bcn, bdc, cma, ibi, cp, vs, cr, pp, crs, grd, drc, sm, rfqd, rfqu, sinv, spay] = await Promise.all([
       repository.getAllItems(),
       repository.getAllProjects(),
       repository.getAllInboxEntries(),
@@ -224,6 +234,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       repository.getAllStudyMaterials(),
       repository.getAllRfqDispatches(),
       repository.getAllRfqUnmatchedEmails(),
+      repository.getAllShipmentInvoices(),
+      repository.getAllShipmentPayments(),
     ])
     setItems(i)
     setProjects(p)
@@ -259,6 +271,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setStudyMaterials(sm)
     setRfqDispatches(rfqd)
     setRfqUnmatchedEmails(rfqu)
+    setShipmentInvoices(sinv)
+    setShipmentPayments(spay)
   }
 
   useEffect(() => {
@@ -1223,6 +1237,62 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  async function addShipmentInvoice(data: Omit<ShipmentInvoice, 'id' | 'createdAt' | 'updatedAt'>) {
+    const now = nowISO()
+    const invoice: ShipmentInvoice = { ...data, id: newId('shipinv'), createdAt: now, updatedAt: now }
+    try {
+      await repository.putShipmentInvoice(invoice)
+      setShipmentInvoices((prev) => [invoice, ...prev])
+      return invoice
+    } catch (err: any) {
+      notify(`לא הצלחתי לשמור את החשבונית: ${err.message ?? err}`, 'error')
+      throw err
+    }
+  }
+
+  async function updateShipmentInvoice(id: string, patch: Partial<ShipmentInvoice>) {
+    const current = shipmentInvoices.find((i) => i.id === id)
+    if (!current) return
+    const next: ShipmentInvoice = { ...current, ...patch, updatedAt: nowISO() }
+    try {
+      await repository.putShipmentInvoice(next)
+      setShipmentInvoices((prev) => prev.map((i) => (i.id === id ? next : i)))
+    } catch (err: any) {
+      notify(`לא הצלחתי לשמור את השינוי: ${err.message ?? err}`, 'error')
+    }
+  }
+
+  async function deleteShipmentInvoice(id: string) {
+    try {
+      await repository.deleteShipmentInvoice(id)
+      setShipmentInvoices((prev) => prev.filter((i) => i.id !== id))
+    } catch (err: any) {
+      notify(`לא הצלחתי למחוק את החשבונית: ${err.message ?? err}`, 'error')
+    }
+  }
+
+  async function addShipmentPayment(data: Omit<ShipmentPayment, 'id' | 'createdAt' | 'updatedAt'>) {
+    const now = nowISO()
+    const payment: ShipmentPayment = { ...data, id: newId('shippay'), createdAt: now, updatedAt: now }
+    try {
+      await repository.putShipmentPayment(payment)
+      setShipmentPayments((prev) => [payment, ...prev])
+      return payment
+    } catch (err: any) {
+      notify(`לא הצלחתי לשמור את התשלום: ${err.message ?? err}`, 'error')
+      throw err
+    }
+  }
+
+  async function deleteShipmentPayment(id: string) {
+    try {
+      await repository.deleteShipmentPayment(id)
+      setShipmentPayments((prev) => prev.filter((p) => p.id !== id))
+    } catch (err: any) {
+      notify(`לא הצלחתי למחוק את התשלום: ${err.message ?? err}`, 'error')
+    }
+  }
+
   async function clearSampleData() {
     try {
       await repository.clearAll()
@@ -1260,6 +1330,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setStudyMaterials([])
       setRfqDispatches([])
       setRfqUnmatchedEmails([])
+      setShipmentInvoices([])
+      setShipmentPayments([])
       notify('כל המידע נמחק. אפשר להתחיל מחדש.', 'success')
     } catch (err: any) {
       notify(`המחיקה נכשלה: ${err.message ?? err}`, 'error')
@@ -1302,6 +1374,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       studyMaterials,
       rfqDispatches,
       rfqUnmatchedEmails,
+      shipmentInvoices,
+      shipmentPayments,
       loading,
       storageAvailable,
       addItem,
@@ -1386,6 +1460,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       addRfqUnmatchedEmail,
       updateRfqUnmatchedEmail,
       deleteRfqUnmatchedEmail,
+      addShipmentInvoice,
+      updateShipmentInvoice,
+      deleteShipmentInvoice,
+      addShipmentPayment,
+      deleteShipmentPayment,
       clearSampleData,
       reloadFromDisk: loadAll,
     }),
@@ -1424,6 +1503,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       studyMaterials,
       rfqDispatches,
       rfqUnmatchedEmails,
+      shipmentInvoices,
+      shipmentPayments,
       loading,
     ],
   )

@@ -6,6 +6,7 @@ import { Shipment, ShipmentQuote, ShipmentDocument, ShipmentTimelineEvent, Forwa
 import { MediaAsset, IdeaBankItem, ContentPiece, VideoScript, ContentRule, PromotionPlan } from '../contentStudioTypes'
 import { Course, Grade, DegreeRequirementCategory, StudyMaterial } from '../studyTypes'
 import { RfqDispatch, RfqUnmatchedEmail } from '../rfqTypes'
+import { ShipmentInvoice, ShipmentPayment } from '../shipmentFinanceTypes'
 import { STORES, getAll, put, remove, clearStore, getMeta, setMeta } from './database'
 
 export const repository = {
@@ -145,6 +146,14 @@ export const repository = {
   putRfqUnmatchedEmail: (e: RfqUnmatchedEmail) => put(STORES.rfqUnmatchedEmails, e),
   deleteRfqUnmatchedEmail: (id: string) => remove(STORES.rfqUnmatchedEmails, id),
 
+  getAllShipmentInvoices: () => getAll<ShipmentInvoice>(STORES.shipmentInvoices),
+  putShipmentInvoice: (i: ShipmentInvoice) => put(STORES.shipmentInvoices, i),
+  deleteShipmentInvoice: (id: string) => remove(STORES.shipmentInvoices, id),
+
+  getAllShipmentPayments: () => getAll<ShipmentPayment>(STORES.shipmentPayments),
+  putShipmentPayment: (p: ShipmentPayment) => put(STORES.shipmentPayments, p),
+  deleteShipmentPayment: (id: string) => remove(STORES.shipmentPayments, id),
+
   clearAll: async () => {
     await clearStore(STORES.items)
     await clearStore(STORES.projects)
@@ -180,6 +189,8 @@ export const repository = {
     await clearStore(STORES.studyMaterials)
     await clearStore(STORES.rfqDispatches)
     await clearStore(STORES.rfqUnmatchedEmails)
+    await clearStore(STORES.shipmentInvoices)
+    await clearStore(STORES.shipmentPayments)
     await setMeta('seeded', 'true')
   },
 

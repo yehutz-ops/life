@@ -35,6 +35,19 @@ const STAGE_LABEL: Record<ShipmentTimelineStage, string> = {
   delivered: 'התקבל',
 }
 
+// תוויות מקוצרות לטבלה הצרה ברצועה הימנית. התוויות המלאות (DISPATCH_STATUS_LABEL) נשארות כפי שהן.
+const DISPATCH_SHORT: Record<DispatchStatus, string> = {
+  not_sent: 'טרם נשלח',
+  sent: 'נשלח',
+  waiting: 'ממתינה',
+  replied: 'התקבלה',
+  incomplete: 'חסר מידע',
+  revised: 'עודכנה',
+  selected: 'נבחרה',
+  rejected: 'נדחתה',
+  failed: 'נכשל',
+}
+
 const DISPATCH_TONE: Record<DispatchStatus, string> = {
   not_sent: 'bg-stone-100 text-stone-500 dark:bg-stone-800 dark:text-stone-400',
   sent: 'bg-blue-50 text-blue-600 dark:bg-blue-950/40 dark:text-blue-300',
@@ -241,26 +254,46 @@ export default function RfqDashboardPage() {
     { name: 'לא נשלחו / נכשלו', amount: dispatches.filter((d) => ['not_sent', 'failed'].includes(d.status)).length, color: '#A8A29E' },
   ].filter((d) => d.amount > 0)
 
+  // שורת "דורש טיפול" — נגזרת מהנתונים, לא רשימה קבועה.
+  const needsClarification = quotes.filter((q) => missingFieldKeys(q).length > 0)
+  const waitingAgencies = dispatches.filter((d) => ['sent', 'waiting'].includes(d.status))
+  const hasSelection = quotes.some((q) => q.status === 'selected')
+  const actions = [
+    needsClarification.length > 0
+      ? { label: 'דחוף', title: 'הצעות חסרות מידע', value: needsClarification.map((q) => q.forwarderName).join(', '), icon: 'doc' as const }
+      : null,
+    waitingAgencies.length > 0
+      ? { label: 'מעקב', title: 'סוכנויות שטרם ענו', value: waitingAgencies.map((d) => d.forwarderName).join(', '), icon: 'phone' as const }
+      : null,
+    !hasSelection && primary?.canRecommend
+      ? { label: 'להחלטה', title: 'בחירת הצעה זוכה', value: primary.recommended?.agencyName ?? '', icon: 'check' as const }
+      : hasSelection
+        ? { label: 'הושלם', title: 'הצעה נבחרה', value: quotes.find((q) => q.status === 'selected')?.forwarderName ?? '', icon: 'check' as const }
+        : null,
+  ].filter(Boolean) as { label: string; title: string; value: string; icon: 'doc' | 'phone' | 'check' }[]
+
+  const modeGroups = comparisons
+
   return (
-    <div className="space-y-5 pb-24">
-      {/* כותרת */}
-      <div className="flex items-start justify-between gap-4 flex-wrap">
+    <div className="space-y-4 pb-24">
+      {/* ===== כותרת ===== */}
+      <div className="flex items-center justify-between gap-4 flex-wrap">
         <div className="flex items-center gap-3">
           <BackLink to={`/work/shipments/${shipment.id}`} label="חזרה למשלוח" />
+          <div className="text-right">
+            <div className="text-[11px] text-stone-400 dark:text-stone-500">עבודה</div>
+            <h1 className="text-[26px] font-extrabold text-stone-900 dark:text-stone-100 leading-tight">יבוא ומשלוחים</h1>
+          </div>
           <span className="w-11 h-11 rounded-2xl bg-[#FBF0E2] dark:bg-amber-950/40 flex items-center justify-center shrink-0">
             <TruckIcon className="w-5 h-5 text-amber-800/80 dark:text-amber-300" />
           </span>
-          <div>
-            <div className="text-xs text-stone-400 dark:text-stone-500">עבודה · יבוא ומשלוחים</div>
-            <h1 className="text-2xl font-extrabold text-stone-900 dark:text-stone-100 leading-tight">השוואת הצעות מחיר</h1>
-          </div>
         </div>
         <button
           onClick={handleCheckEmails}
           disabled={checking}
-          className="px-4 py-2.5 rounded-xl bg-amber-800 text-white text-sm font-medium hover:bg-amber-900 disabled:opacity-60"
+          className="px-5 py-2.5 rounded-xl bg-[#3B2A1C] text-white text-sm font-medium hover:bg-[#2A1E14] disabled:opacity-60 shadow-sm"
         >
-          {checking ? 'בודק מיילים...' : 'בדוק תשובות במייל'}
+          {checking ? 'בודק מיילים…' : '+ בדוק תשובות במייל'}
         </button>
       </div>
 
@@ -270,310 +303,424 @@ export default function RfqDashboardPage() {
         </Panel>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_2.1fr] gap-4 items-start">
-        {/* ===== עמודה ימנית ===== */}
+      {/* ===== שורת "דורש טיפול" ===== */}
+      {actions.length > 0 && (
+        <Panel className="px-5 py-3.5">
+          <div className="flex items-stretch gap-5 flex-wrap">
+            <div className="shrink-0 pe-5 border-e border-stone-100 dark:border-stone-800">
+              <div className="text-[15px] font-bold text-stone-800 dark:text-stone-100">היום בעבודה</div>
+              <div className="text-[11px] text-stone-400 dark:text-stone-500 mt-0.5">{shipment.rfqReference ?? shipment.name}</div>
+            </div>
+            {actions.map((a, i) => (
+              <div key={a.title} className={`flex items-center gap-3 min-w-0 flex-1 ${i < actions.length - 1 ? 'pe-5 border-e border-stone-100 dark:border-stone-800' : ''}`}>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <span className={`text-[10px] font-bold ${a.label === 'דחוף' ? 'text-rose-500' : a.label === 'הושלם' ? 'text-emerald-600' : 'text-amber-600'}`}>{a.label}</span>
+                    <span className="text-[13px] font-semibold text-stone-700 dark:text-stone-200 truncate">{a.title}</span>
+                  </div>
+                  <div className="text-[11px] text-stone-400 dark:text-stone-500 truncate mt-0.5">{a.value}</div>
+                </div>
+                <span className="w-7 h-7 shrink-0 rounded-lg bg-stone-50 dark:bg-stone-800 flex items-center justify-center text-stone-400 text-xs">
+                  {a.icon === 'doc' ? '📄' : a.icon === 'phone' ? '☎' : '✓'}
+                </span>
+              </div>
+            ))}
+          </div>
+        </Panel>
+      )}
+
+      {/* ===== גוף העמוד: רצועה ימנית צרה + אזור ראשי רחב ===== */}
+      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,3.9fr)] gap-4 items-start">
+        {/* --- רצועה ימנית --- */}
         <div className="space-y-4">
           {/* דואר נכנס / התראות */}
-          <Panel className="p-5">
+          <Panel className="p-4">
             <PanelHead
-              title="דואר נכנס / התראות"
-              icon={<span className="w-4 h-4 text-stone-300">✉</span>}
+              title="דוא״ל נכנס / התראות"
+              icon={<span className="text-stone-300 text-sm">✉</span>}
               action={
                 inbox.length > 0 ? (
-                  <span className="w-6 h-6 rounded-full bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-400 text-xs font-bold flex items-center justify-center">
+                  <span className="w-5 h-5 rounded-full bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-400 text-[11px] font-bold flex items-center justify-center">
                     {inbox.length}
                   </span>
                 ) : undefined
               }
             />
             {inbox.length === 0 ? (
-              <div className="py-6 text-center text-sm text-stone-400 dark:text-stone-500">אין עדכונים לבקשה הזו</div>
+              <div className="py-5 text-center text-xs text-stone-400 dark:text-stone-500">אין עדכונים לבקשה הזו</div>
             ) : (
-              <ul className="divide-y divide-stone-100 dark:divide-stone-800 max-h-72 overflow-y-auto">
+              <ul className="divide-y divide-stone-100 dark:divide-stone-800 max-h-[168px] overflow-y-auto -mx-1">
                 {inbox.map((e) => (
-                  <li key={e.id} className="py-2.5 flex items-start gap-2">
+                  <li key={e.id} className="px-1 py-2 flex items-start gap-2">
                     <span className={`w-1.5 h-1.5 rounded-full shrink-0 mt-1.5 ${e.tone === 'new' ? 'bg-blue-500' : 'bg-amber-500'}`} />
                     <div className="min-w-0 flex-1">
-                      <div className="text-xs font-semibold text-stone-800 dark:text-stone-100 truncate">{e.title}</div>
-                      <div className="text-[11px] text-stone-400 dark:text-stone-500 truncate">{e.agencyName}</div>
+                      <div className="text-[11px] font-semibold text-stone-800 dark:text-stone-100 leading-tight truncate">{e.title}</div>
+                      <div className="text-[10px] text-stone-400 dark:text-stone-500 truncate">{e.agencyName}</div>
+                      {e.amount && <div className="text-[11px] font-bold text-stone-700 dark:text-stone-200 mt-0.5">{e.amount}</div>}
                       {e.unmatchedId && (
                         <button
                           onClick={() => updateRfqUnmatchedEmail(e.unmatchedId!, { dismissed: true })}
-                          className="text-[11px] text-amber-800 dark:text-amber-400 mt-1 hover:opacity-70"
+                          className="text-[10px] text-amber-800 dark:text-amber-400 mt-0.5 hover:opacity-70"
                         >
                           סמן כטופל
                         </button>
                       )}
                     </div>
-                    {e.amount && <span className="text-xs font-bold text-stone-700 dark:text-stone-200 shrink-0">{e.amount}</span>}
+                    {e.at && <span className="text-[10px] text-stone-300 dark:text-stone-600 shrink-0">{new Date(e.at).toLocaleDateString('he-IL', { day: '2-digit', month: '2-digit' })}</span>}
                   </li>
                 ))}
               </ul>
             )}
           </Panel>
 
-          {/* סטטוס כל הסוכנויות */}
-          <Panel className="p-5">
-            <PanelHead title="כל הסוכנויות" icon={<ChecklistIcon className="w-4 h-4 text-stone-300 dark:text-stone-600" />} />
+          {/* סטטוס כל הסוכנויות — טבלה */}
+          <Panel className="p-4">
+            <PanelHead title="כל הסוכנויות" icon={<ChecklistIcon className="w-3.5 h-3.5 text-stone-300 dark:text-stone-600" />} />
             {dispatches.length === 0 ? (
-              <div className="py-6 text-center text-sm text-stone-400 dark:text-stone-500">הבקשה עדיין לא נשלחה לאף סוכנות</div>
+              <div className="py-5 text-center text-xs text-stone-400 dark:text-stone-500">טרם נשלח לאף סוכנות</div>
             ) : (
-              <ul className="divide-y divide-stone-100 dark:divide-stone-800">
-                {dispatches.map((d) => (
-                  <li key={d.id} className="flex items-center justify-between gap-2 py-2">
-                    <span className="text-xs text-stone-700 dark:text-stone-200 truncate" title={d.recipientEmail}>
-                      {d.forwarderName}
-                    </span>
-                    <span className={`px-2 py-0.5 rounded-full text-[11px] font-medium shrink-0 ${DISPATCH_TONE[d.status]}`}>
-                      {DISPATCH_STATUS_LABEL[d.status]}
-                    </span>
-                  </li>
-                ))}
-              </ul>
+              <table className="w-full text-[11px] table-fixed">
+                <thead>
+                  <tr className="text-stone-300 dark:text-stone-600">
+                    <th className="text-right font-medium pb-1.5 w-[86px]">סוכנות</th>
+                    <th className="font-medium pb-1.5 w-7">נשלח</th>
+                    <th className="font-medium pb-1.5 w-7">נענה</th>
+                    <th className="text-left font-medium pb-1.5 w-[56px]">סטטוס</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-stone-50 dark:divide-stone-800/60">
+                  {dispatches.map((d) => {
+                    const replied = ['replied', 'incomplete', 'revised', 'selected'].includes(d.status)
+                    const sent = d.status !== 'not_sent' && d.status !== 'failed'
+                    return (
+                      <tr key={d.id}>
+                        <td className="py-1.5 pe-1 text-stone-700 dark:text-stone-200 truncate" title={`${d.forwarderName} · ${d.recipientEmail}`}>
+                          {d.forwarderName}
+                        </td>
+                        <td className="py-1.5 text-center">{sent ? <span className="text-emerald-500">✓</span> : <span className="text-stone-300">–</span>}</td>
+                        <td className="py-1.5 text-center">{replied ? <span className="text-emerald-500">✓</span> : <span className="text-stone-300">–</span>}</td>
+                        <td className="py-1.5 text-left">
+                          <span
+                            className={`inline-block px-1.5 py-0.5 rounded-md text-[10px] font-medium whitespace-nowrap ${DISPATCH_TONE[d.status]}`}
+                            title={DISPATCH_STATUS_LABEL[d.status]}
+                          >
+                            {DISPATCH_SHORT[d.status]}
+                          </span>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
             )}
           </Panel>
 
           {/* ציר זמן */}
-          <Panel className="p-5">
-            <PanelHead title="ציר זמן פעילות" icon={<CalendarIcon className="w-4 h-4 text-stone-300 dark:text-stone-600" />} />
+          <Panel className="p-4">
+            <PanelHead title="פעילות בתיק" icon={<CalendarIcon className="w-3.5 h-3.5 text-stone-300 dark:text-stone-600" />} />
             {timeline.length === 0 ? (
-              <div className="py-6 text-center text-sm text-stone-400 dark:text-stone-500">אין עדיין אירועים</div>
+              <div className="py-5 text-center text-xs text-stone-400 dark:text-stone-500">אין עדיין אירועים</div>
             ) : (
-              <ol className="space-y-3 max-h-80 overflow-y-auto">
-                {timeline.map((e) => (
-                  <li key={e.id} className="flex items-start gap-2.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-amber-800 shrink-0 mt-1.5" />
-                    <div className="min-w-0">
-                      <div className="text-xs font-medium text-stone-800 dark:text-stone-100">{STAGE_LABEL[e.stage]}</div>
-                      {e.notes && <div className="text-[11px] text-stone-400 dark:text-stone-500 break-words">{e.notes}</div>}
-                      <div className="text-[10px] text-stone-300 dark:text-stone-600 mt-0.5">{new Date(e.createdAt).toLocaleString('he-IL')}</div>
-                    </div>
-                  </li>
-                ))}
+              <ol className="space-y-2 max-h-[158px] overflow-y-auto pe-1">
+                {timeline.map((e) => {
+                  const pending = e.stage === 'followup_requested'
+                  return (
+                    <li key={e.id} className="flex items-start gap-2">
+                      <span
+                        className={`w-4 h-4 shrink-0 rounded-full flex items-center justify-center text-[9px] mt-0.5 ${
+                          pending ? 'bg-amber-50 text-amber-600 dark:bg-amber-950/40' : 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40'
+                        }`}
+                      >
+                        {pending ? '⏳' : '✓'}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <div className="text-[11px] font-medium text-stone-700 dark:text-stone-200 leading-tight">{STAGE_LABEL[e.stage]}</div>
+                        {e.notes && <div className="text-[10px] text-stone-400 dark:text-stone-500 break-words leading-tight mt-0.5">{e.notes}</div>}
+                        <div className="text-[9px] text-stone-300 dark:text-stone-600 mt-0.5">
+                          {new Date(e.createdAt).toLocaleString('he-IL', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                        </div>
+                      </div>
+                    </li>
+                  )
+                })}
               </ol>
             )}
           </Panel>
         </div>
 
-        {/* ===== עמודה שמאלית (התוכן הראשי) ===== */}
+        {/* --- אזור ראשי --- */}
         <div className="space-y-4">
-          {/* סקירת RFQ + ההצעה הטובה */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Panel className="p-5">
-              <div className="text-xs text-stone-400 dark:text-stone-500 mb-1">סקירת RFQ</div>
-              <div className="text-2xl font-extrabold text-stone-900 dark:text-stone-100 mb-1">{shipment.rfqReference ?? 'ללא מזהה'}</div>
-              <div className="text-sm text-stone-600 dark:text-stone-300 mb-3">{shipment.name ?? 'ללא שם'}</div>
-              <div className="flex items-center gap-2 text-sm text-stone-500 dark:text-stone-400 mb-4">
-                <span>{shipment.originCountry || 'מוצא לא ידוע'}</span>
-                <span className="text-stone-300">←</span>
-                <span>{shipment.destination || 'ישראל'}</span>
-                {shipment.shippingMode && <Chip>{TRANSPORT_MODE_LABEL[shipment.shippingMode as TransportMode] ?? shipment.shippingMode}</Chip>}
-              </div>
-              <div className="flex flex-wrap gap-2 mb-4">
-                <Chip>נשלח ל-{dispatches.length} סוכנויות</Chip>
-                <Chip tone="good">{repliedCount} הצעות התקבלו</Chip>
-                <Chip tone="warn">{waitingCount} ממתינות</Chip>
-              </div>
-              {documents.length > 0 && (
-                <>
-                  <div className="text-xs text-stone-400 dark:text-stone-500 mb-1.5">מסמכים מצורפים</div>
-                  <div className="flex flex-wrap gap-1.5">
-                    {documents.map((d) => (
-                      <span key={d.id} className="px-2 py-1 rounded-lg border border-stone-200 dark:border-stone-700 text-[11px] text-stone-500 dark:text-stone-400">
-                        {d.name}
-                      </span>
-                    ))}
-                  </div>
-                </>
-              )}
-            </Panel>
-
+          {/* ההצעה הטובה + סקירת RFQ */}
+          <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1.11fr)_minmax(0,1fr)] gap-4">
             {/* ההצעה הטובה כרגע */}
-            <div className="rounded-2xl p-5 text-white relative overflow-hidden" style={{ background: 'linear-gradient(150deg, #4A3524, #241A12)' }}>
-              <div className="text-xs text-white/60 mb-3">ההצעה הטובה כרגע</div>
-              {primary?.canRecommend && primary.recommended ? (
-                <>
-                  <div className="text-lg font-bold mb-1">{primary.recommended.agencyName}</div>
-                  <div className="text-3xl font-extrabold mb-4">{money(primary.recommended.totalPrice, primary.recommended.currency)}</div>
-                  <div className="grid grid-cols-3 gap-2 text-center mb-4">
-                    <div>
-                      <div className="text-sm font-semibold">
-                        {primary.recommended.transitMin != null && primary.recommended.transitMax != null
-                          ? `${primary.recommended.transitMin}–${primary.recommended.transitMax}`
-                          : (primary.recommended.transitMax ?? '—')}
+            <div className="rounded-2xl relative overflow-hidden shadow-sm" style={{ background: 'linear-gradient(145deg, #4A3524 0%, #2A1E14 100%)' }}>
+              <div className="absolute top-0 start-5 w-9 h-11 bg-[#C9A227] rounded-b-md flex items-start justify-center pt-1.5 text-white text-xs">★</div>
+              <div className="p-4 text-white">
+                <div className="text-[11px] text-white/55 mb-2.5">ההצעה הטובה כרגע</div>
+                {primary?.canRecommend && primary.recommended ? (
+                  <>
+                    <div className="flex items-baseline justify-between gap-3 mb-3">
+                      <div className="text-lg font-bold">{primary.recommended.agencyName}</div>
+                      <div className="text-[11px] text-white/50">{TRANSPORT_MODE_LABEL[quoteMode(primary.recommended.quote)]}</div>
+                    </div>
+                    <div className="flex items-end justify-between gap-4 mb-3.5">
+                      <div>
+                        <div className="text-[30px] font-extrabold leading-none">{money(primary.recommended.totalPrice, primary.recommended.currency)}</div>
+                        <div className="text-[10px] text-white/45 mt-1.5">כולל כל העלויות שצוינו</div>
                       </div>
-                      <div className="text-[10px] text-white/50 mt-0.5">ימי מעבר</div>
+                      <div className="flex gap-5 text-center">
+                        <div>
+                          <div className="text-[13px] font-semibold">
+                            {primary.recommended.transitMin != null && primary.recommended.transitMax != null
+                              ? `${primary.recommended.transitMin}–${primary.recommended.transitMax}`
+                              : (primary.recommended.transitMax ?? '—')}{' '}
+                            ימים
+                          </div>
+                          <div className="text-[10px] text-white/45 mt-0.5">זמן מעבר</div>
+                        </div>
+                        <div>
+                          <div className="text-[13px] font-semibold">{INCLUSION_LABEL[primary.recommended.quote.extraction?.pickupIncluded ?? 'unclear']}</div>
+                          <div className="text-[10px] text-white/45 mt-0.5">איסוף כלול</div>
+                        </div>
+                        <div>
+                          <div className="text-[13px] font-semibold">{INCLUSION_LABEL[primary.recommended.quote.extraction?.dgIncluded ?? 'unclear']}</div>
+                          <div className="text-[10px] text-white/45 mt-0.5">DG</div>
+                        </div>
+                      </div>
                     </div>
-                    <div>
-                      <div className="text-sm font-semibold">{INCLUSION_LABEL[primary.recommended.quote.extraction?.pickupIncluded ?? 'unclear']}</div>
-                      <div className="text-[10px] text-white/50 mt-0.5">איסוף כלול</div>
+                    <div className="rounded-xl bg-white/[0.07] px-3.5 py-2 mb-2.5">
+                      <p className="text-[11px] text-white/70 leading-relaxed">
+                        <span className="font-semibold text-white/90">המלצת המערכת: </span>
+                        {primary.recommendationReason}
+                      </p>
                     </div>
-                    <div>
-                      <div className="text-sm font-semibold">{INCLUSION_LABEL[primary.recommended.quote.extraction?.dgIncluded ?? 'unclear']}</div>
-                      <div className="text-[10px] text-white/50 mt-0.5">DG</div>
-                    </div>
-                  </div>
-                  <p className="text-xs text-white/70 leading-relaxed mb-4">{primary.recommendationReason}</p>
-                  <button
-                    onClick={() => handleSelectQuote(primary.recommended!.quote)}
-                    className="w-full py-2.5 rounded-xl bg-white/15 hover:bg-white/25 text-sm font-medium transition-colors"
-                  >
-                    בחר את ההצעה הזו
-                  </button>
-                </>
-              ) : (
-                <div className="py-8 text-center text-sm text-white/60">{primary?.recommendationReason ?? 'עדיין לא התקבלו הצעות'}</div>
-              )}
+                    <button
+                      onClick={() => handleSelectQuote(primary.recommended!.quote)}
+                      className="w-full py-2 rounded-xl bg-white/[0.12] hover:bg-white/20 text-[13px] font-medium transition-colors"
+                    >
+                      בחר את ההצעה הזו ←
+                    </button>
+                  </>
+                ) : (
+                  <div className="py-8 text-center text-[13px] text-white/55">{primary?.recommendationReason ?? 'עדיין לא התקבלו הצעות'}</div>
+                )}
+              </div>
             </div>
+
+            {/* סקירת RFQ */}
+            <Panel className="overflow-hidden">
+              <div className="flex h-full">
+                <div
+                  className="w-[110px] shrink-0 flex items-center justify-center"
+                  style={{ background: 'linear-gradient(160deg, #FBF0E2 0%, #F2E3CE 100%)' }}
+                >
+                  <span className="text-4xl opacity-60" aria-hidden="true">
+                    {shipment.shippingMode === 'sea' ? '🚢' : '✈️'}
+                  </span>
+                </div>
+                <div className="flex-1 min-w-0 p-3.5">
+                  <div className="text-[11px] text-stone-400 dark:text-stone-500 mb-1">סקירת RFQ</div>
+                  <div className="text-[21px] font-extrabold text-stone-900 dark:text-stone-100 leading-none mb-1.5">{shipment.rfqReference ?? 'ללא מזהה'}</div>
+                  <div className="flex items-center gap-2 text-[13px] text-stone-600 dark:text-stone-300 mb-2.5">
+                    <span>{shipment.originCountry || 'מוצא'}</span>
+                    <span className="text-stone-300">→</span>
+                    <span>{shipment.destination || 'Israel'}</span>
+                    {shipment.shippingMode && (
+                      <span className="text-[11px] text-stone-400">{TRANSPORT_MODE_LABEL[shipment.shippingMode as TransportMode] ?? shipment.shippingMode}</span>
+                    )}
+                  </div>
+                  <div className="flex flex-wrap gap-1.5 mb-2.5">
+                    <Chip>נשלח ל-{dispatches.length} סוכנויות</Chip>
+                    <Chip tone="good">{repliedCount} הצעות התקבלו</Chip>
+                    <Chip tone="warn">{waitingCount} ממתינות</Chip>
+                  </div>
+                  {documents.length > 0 && (
+                    <>
+                      <div className="text-[10px] text-stone-400 dark:text-stone-500 mb-1">מסמכים מצורפים:</div>
+                      <div className="flex flex-wrap gap-1">
+                        {documents.map((d) => (
+                          <span
+                            key={d.id}
+                            className="px-2 py-0.5 rounded-md border border-stone-200 dark:border-stone-700 text-[10px] text-stone-500 dark:text-stone-400 truncate max-w-[110px]"
+                            title={d.name}
+                          >
+                            {d.name.replace(/\.[^.]+$/, '')}
+                          </span>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            </Panel>
           </div>
 
-          {/* השוואת הצעות מחיר — קיבוץ לפי סוג הובלה */}
-          {comparisons.map((cmp) => (
-            <div key={cmp.mode}>
-              <div className="flex items-center justify-between mb-3">
-                <h2 className="text-lg font-bold text-stone-800 dark:text-stone-100">
-                  השוואת הצעות · {TRANSPORT_MODE_LABEL[cmp.mode]}
-                </h2>
-                <span className="text-xs text-stone-400 dark:text-stone-500">{cmp.quotes.length} הצעות</span>
-              </div>
-              <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(230px, 1fr))' }}>
-                {cmp.quotes.map((m) => {
-                  const versions = quoteVersions(shipmentQuotes, shipment.id, m.quote.forwarderId ?? m.quote.forwarderName)
-                  const isSelected = m.quote.status === 'selected'
-                  return (
-                    <Panel key={m.quote.id} className={`p-4 relative ${isSelected ? 'ring-2 ring-amber-800' : ''}`}>
-                      <div className="flex items-start justify-between gap-2 mb-2">
-                        <div className="min-w-0">
-                          <div className="text-sm font-bold text-stone-800 dark:text-stone-100 truncate">{m.agencyName}</div>
-                          <div className="text-[11px] text-stone-400 dark:text-stone-500">{TRANSPORT_MODE_LABEL[quoteMode(m.quote)]}</div>
-                        </div>
-                        <div className="flex flex-col items-end gap-1 shrink-0">
-                          {m.quote.id === cmp.recommended?.quote.id && cmp.canRecommend && <Chip tone="good">מומלץ</Chip>}
-                          {m.missingFields.length > 0 && <Chip tone="warn">חסר מידע</Chip>}
-                          {(m.quote.version ?? 1) > 1 && <Chip>v{m.quote.version}</Chip>}
-                        </div>
-                      </div>
-
-                      <div className="text-2xl font-extrabold text-stone-900 dark:text-stone-100 mb-1">{money(m.totalPrice, m.currency)}</div>
-                      {m.diffFromCheapestPct != null && m.diffFromCheapestPct > 0 && (
-                        <div className="text-[11px] text-stone-400 dark:text-stone-500 mb-2">+{m.diffFromCheapestPct.toFixed(0)}% מהזולה</div>
-                      )}
-                      {m.pricePerKg != null && (
-                        <div className="text-[11px] text-stone-400 dark:text-stone-500 mb-2">{m.pricePerKg.toFixed(2)} {m.currency}/ק"ג</div>
-                      )}
-
-                      <dl className="text-[11px] space-y-1 border-t border-stone-100 dark:border-stone-800 pt-2 mb-2">
-                        <div className="flex justify-between">
-                          <dt className="text-stone-400">זמן מעבר</dt>
-                          <dd className="text-stone-700 dark:text-stone-200">
-                            {m.transitMin != null && m.transitMax != null ? `${m.transitMin}–${m.transitMax} ימים` : m.transitMax != null ? `${m.transitMax} ימים` : '—'}
-                          </dd>
-                        </div>
-                        <div className="flex justify-between">
-                          <dt className="text-stone-400">איסוף</dt>
-                          <dd className="text-stone-700 dark:text-stone-200">{INCLUSION_LABEL[m.quote.extraction?.pickupIncluded ?? 'unclear']}</dd>
-                        </div>
-                        <div className="flex justify-between">
-                          <dt className="text-stone-400">DG</dt>
-                          <dd className="text-stone-700 dark:text-stone-200">{INCLUSION_LABEL[m.quote.extraction?.dgIncluded ?? 'unclear']}</dd>
-                        </div>
-                        {m.quote.extraction?.validityDate && (
-                          <div className="flex justify-between">
-                            <dt className="text-stone-400">תוקף</dt>
-                            <dd className="text-stone-700 dark:text-stone-200">{m.quote.extraction.validityDate}</dd>
-                          </div>
-                        )}
-                      </dl>
-
-                      {m.missingFields.length > 0 && (
-                        <div className="mb-2">
-                          <div className="text-[10px] text-amber-700 dark:text-amber-400 mb-1.5">נדרשת השלמה: {m.missingFields.join(', ')}</div>
-                          <button
-                            onClick={() => openFollowUp(m.quote)}
-                            className="text-[11px] font-medium text-amber-800 dark:text-amber-400 hover:opacity-70"
-                          >
-                            בקש השלמה →
-                          </button>
-                        </div>
-                      )}
-
-                      {m.quote.sourceEmail && (
-                        <div className="text-[10px] text-stone-300 dark:text-stone-600 mb-2 truncate" title={m.quote.sourceEmail.subject}>
-                          מתוך מייל: {m.quote.sourceEmail.subject}
-                        </div>
-                      )}
-
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => handleSelectQuote(m.quote)}
-                          className={`flex-1 py-2 rounded-xl text-xs font-medium ${isSelected ? 'bg-amber-800 text-white' : 'border border-stone-200 dark:border-stone-700 text-stone-600 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-800'}`}
-                        >
-                          {isSelected ? 'נבחרה' : 'בחר'}
-                        </button>
-                        {versions.length > 1 && (
-                          <button
-                            onClick={() => setOpenVersionsFor(openVersionsFor === m.quote.id ? null : m.quote.id)}
-                            className="px-2.5 py-2 rounded-xl border border-stone-200 dark:border-stone-700 text-xs text-stone-500"
-                            title="היסטוריית גרסאות"
-                          >
-                            ⋯
-                          </button>
-                        )}
-                      </div>
-
-                      {openVersionsFor === m.quote.id && (
-                        <ul className="mt-2 border-t border-stone-100 dark:border-stone-800 pt-2 space-y-1">
-                          {versions.map((v) => (
-                            <li key={v.id} className="flex justify-between text-[11px]">
-                              <span className="text-stone-500">v{v.version ?? 1} · {v.dateReceived ?? '—'}</span>
-                              <span className="text-stone-700 dark:text-stone-200">{money(v.extraction?.totalPrice ?? v.price, v.extraction?.currency ?? v.currency)}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                    </Panel>
-                  )
-                })}
-              </div>
+          {/* השוואת הצעות מחיר — שורה אחת, מקובצת לפי סוג הובלה */}
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-[17px] font-bold text-stone-800 dark:text-stone-100">השוואת הצעות מחיר</h2>
+              <span className="text-[11px] text-stone-400 dark:text-stone-500">
+                {quotes.length} הצעות · {modeGroups.map((g) => TRANSPORT_MODE_LABEL[g.mode]).join(' / ')}
+              </span>
             </div>
-          ))}
 
-          {quotes.length === 0 && (
-            <Panel className="p-10 text-center">
-              <div className="text-sm text-stone-400 dark:text-stone-500 mb-2">עדיין לא התקבלו הצעות מחיר</div>
-              <div className="text-xs text-stone-400 dark:text-stone-500">
-                לחיצה על "בדוק תשובות במייל" תקרא מיילים חדשים, תזהה תשובות לבקשה הזו ותחלץ מהן את ההצעות.
+            {quotes.length === 0 ? (
+              <Panel className="p-10 text-center">
+                <div className="text-sm text-stone-400 dark:text-stone-500 mb-1">עדיין לא התקבלו הצעות מחיר</div>
+                <div className="text-xs text-stone-400 dark:text-stone-500">
+                  "בדוק תשובות במייל" יקרא מיילים חדשים, יזהה תשובות לבקשה הזו ויחלץ מהן את ההצעות.
+                </div>
+              </Panel>
+            ) : (
+              <div className="flex items-stretch gap-3 flex-wrap">
+                {modeGroups.map((cmp, gi) => (
+                  <div key={cmp.mode} className="flex items-stretch gap-3 min-w-0" style={{ flexGrow: cmp.quotes.length, flexBasis: 0 }}>
+                    {gi > 0 && <div className="w-px bg-stone-200 dark:bg-stone-800 self-stretch shrink-0" />}
+                    {cmp.quotes.map((m) => {
+                      const versions = quoteVersions(shipmentQuotes, shipment.id, m.quote.forwarderId ?? m.quote.forwarderName)
+                      const isSelected = m.quote.status === 'selected'
+                      const isRecommended = m.quote.id === cmp.recommended?.quote.id && cmp.canRecommend
+                      return (
+                        <Panel
+                          key={m.quote.id}
+                          className={`p-3 flex-1 min-w-0 flex flex-col transition-all hover:shadow-md ${
+                            isSelected ? 'ring-2 ring-amber-800' : isRecommended ? 'ring-1 ring-emerald-300 dark:ring-emerald-800' : ''
+                          }`}
+                        >
+                          <div className="flex items-center gap-1.5 mb-1.5 min-w-0">
+                            <span className="text-[13px] font-bold text-stone-800 dark:text-stone-100 truncate" title={m.agencyName}>
+                              {m.agencyName}
+                            </span>
+                            <span className="shrink-0 px-1.5 py-px rounded-md bg-stone-100 dark:bg-stone-800 text-[10px] text-stone-500 dark:text-stone-400">
+                              {TRANSPORT_MODE_LABEL[quoteMode(m.quote)]}
+                            </span>
+                          </div>
+
+                          <div className="flex items-end justify-between gap-1.5 mb-2">
+                            <div className="min-w-0">
+                              <div className="text-[20px] font-extrabold text-stone-900 dark:text-stone-100 leading-none whitespace-nowrap">
+                                {money(m.totalPrice, m.currency)}
+                              </div>
+                              <div className="text-[10px] text-stone-400 dark:text-stone-500 truncate mt-1 h-[13px]">
+                                {m.diffFromCheapestPct != null && m.diffFromCheapestPct > 0 ? `+${m.diffFromCheapestPct.toFixed(0)}% ` : ''}
+                                {m.pricePerKg != null ? `${m.pricePerKg.toFixed(2)}/ק״ג` : ''}
+                              </div>
+                            </div>
+                            <div className="flex flex-col items-end gap-1 shrink-0">
+                              {isRecommended && <Chip tone="good">מומלץ</Chip>}
+                              {m.missingFields.length > 0 && <Chip tone="warn">הבהרה</Chip>}
+                              {(m.quote.version ?? 1) > 1 && <Chip>v{m.quote.version}</Chip>}
+                            </div>
+                          </div>
+
+                          <dl className="text-[11px] space-y-0.5 border-t border-stone-100 dark:border-stone-800 pt-1.5 mb-1.5">
+                            <div className="flex justify-between gap-2">
+                              <dt className="text-stone-400 dark:text-stone-500">זמן מעבר</dt>
+                              <dd className="text-stone-700 dark:text-stone-200 font-medium">
+                                {m.transitMin != null && m.transitMax != null ? `${m.transitMin}–${m.transitMax} ימים` : m.transitMax != null ? `${m.transitMax} ימים` : '—'}
+                              </dd>
+                            </div>
+                            <div className="flex justify-between gap-2">
+                              <dt className="text-stone-400 dark:text-stone-500">איסוף כלול</dt>
+                              <dd className={m.quote.extraction?.pickupIncluded === 'included' ? 'text-emerald-600 dark:text-emerald-400 font-medium' : 'text-stone-700 dark:text-stone-200'}>
+                                {INCLUSION_LABEL[m.quote.extraction?.pickupIncluded ?? 'unclear']}
+                              </dd>
+                            </div>
+                            <div className="flex justify-between gap-2">
+                              <dt className="text-stone-400 dark:text-stone-500">DG</dt>
+                              <dd className={m.quote.extraction?.dgIncluded === 'unclear' ? 'text-amber-600 dark:text-amber-400 font-medium' : 'text-stone-700 dark:text-stone-200'}>
+                                {INCLUSION_LABEL[m.quote.extraction?.dgIncluded ?? 'unclear']}
+                              </dd>
+                            </div>
+                            <div className="flex justify-between gap-2">
+                              <dt className="text-stone-400 dark:text-stone-500">תוקף הצעה</dt>
+                              <dd className="text-stone-700 dark:text-stone-200">{m.quote.extraction?.validityDate ?? '—'}</dd>
+                            </div>
+                          </dl>
+
+                          {m.missingFields.length > 0 && (
+                            <button
+                              onClick={() => openFollowUp(m.quote)}
+                              className="text-[10px] text-amber-700 dark:text-amber-400 text-right mb-1.5 hover:opacity-70 leading-tight overflow-hidden"
+                              style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}
+                            >
+                              ⚠ חסר: {m.missingFields.join(', ')} — בקש השלמה
+                            </button>
+                          )}
+
+                          <div className="flex gap-1.5 mt-auto pt-1">
+                            <button
+                              onClick={() => handleSelectQuote(m.quote)}
+                              className={`flex-1 py-1.5 rounded-xl text-[12px] font-medium transition-colors ${
+                                isSelected
+                                  ? 'bg-[#3B2A1C] text-white'
+                                  : 'border border-stone-200 dark:border-stone-700 text-stone-600 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-800'
+                              }`}
+                            >
+                              {isSelected ? 'נבחר' : 'בחר'}
+                            </button>
+                            {versions.length > 1 && (
+                              <button
+                                onClick={() => setOpenVersionsFor(openVersionsFor === m.quote.id ? null : m.quote.id)}
+                                className="px-2 py-1.5 rounded-xl border border-stone-200 dark:border-stone-700 text-[12px] text-stone-400"
+                                title="היסטוריית גרסאות"
+                              >
+                                ⋯
+                              </button>
+                            )}
+                          </div>
+
+                          {openVersionsFor === m.quote.id && (
+                            <ul className="mt-2 border-t border-stone-100 dark:border-stone-800 pt-2 space-y-1">
+                              {versions.map((v) => (
+                                <li key={v.id} className="flex justify-between text-[10px]">
+                                  <span className="text-stone-400">v{v.version ?? 1} · {v.dateReceived ?? '—'}</span>
+                                  <span className="text-stone-700 dark:text-stone-200">{money(v.extraction?.totalPrice ?? v.price, v.extraction?.currency ?? v.currency)}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                        </Panel>
+                      )
+                    })}
+                  </div>
+                ))}
               </div>
-            </Panel>
-          )}
+            )}
+          </div>
 
           {/* גרפים */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Panel className="p-5">
-              <PanelHead title="מחיר מול זמן מעבר" />
+          <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1.15fr)_minmax(0,1.05fr)_minmax(0,1fr)] gap-4">
+            <Panel className="p-4">
+              <PanelHead title={`מחיר מול זמן מעבר${barMode ? ` (${TRANSPORT_MODE_LABEL[barMode]})` : ''}`} />
               <ScatterChart
                 points={scatterPoints}
-                xLabel="ימי מעבר"
+                height={190}
+                xLabel="זמן מעבר (ימים)"
                 formatX={(v) => v.toFixed(0)}
                 formatY={(v) => (v >= 1000 ? `${(v / 1000).toFixed(1)}K` : v.toFixed(0))}
               />
             </Panel>
-            <Panel className="p-5">
+            <Panel className="p-4">
               <PanelHead title={barMode ? `השוואת מחירים · ${TRANSPORT_MODE_LABEL[barMode]}` : 'השוואת מחירים'} />
               {barData.length > 0 ? (
-                <BarChart data={barData} height={160} color={ACCENT} valueSuffix="" />
+                <div className="pt-2">
+                  <BarChart data={barData} height={162} color={ACCENT} valueSuffix="" />
+                </div>
               ) : (
-                <div className="h-[160px] flex items-center justify-center text-xs text-stone-300 dark:text-stone-600 border border-dashed border-stone-200 dark:border-stone-800 rounded-xl">
+                <div className="h-[190px] flex items-center justify-center text-xs text-stone-300 dark:text-stone-600 border border-dashed border-stone-200 dark:border-stone-800 rounded-xl">
                   אין עדיין הצעות עם מחיר
                 </div>
               )}
             </Panel>
-            <Panel className="p-5">
-              <PanelHead title="פילוח הצעות" />
+            <Panel className="p-4">
+              <PanelHead title="פילוח הצעות מחיר" />
               {donutData.length > 0 ? (
-                <DonutChart data={donutData} size={120} strokeWidth={16} />
+                <div className="flex items-center justify-center h-[190px]">
+                  <DonutChart data={donutData} size={140} strokeWidth={18} valueSuffix="" centerLabel="סוכנויות" />
+                </div>
               ) : (
-                <div className="h-[120px] flex items-center justify-center text-xs text-stone-300 dark:text-stone-600 border border-dashed border-stone-200 dark:border-stone-800 rounded-xl">
+                <div className="h-[190px] flex items-center justify-center text-xs text-stone-300 dark:text-stone-600 border border-dashed border-stone-200 dark:border-stone-800 rounded-xl">
                   אין עדיין נתונים
                 </div>
               )}
@@ -581,6 +728,7 @@ export default function RfqDashboardPage() {
           </div>
         </div>
       </div>
+
       {followUp && (
         <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50 p-4" onClick={() => setFollowUp(null)}>
           <div className="bg-white dark:bg-stone-900 rounded-2xl shadow-xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
@@ -613,7 +761,7 @@ export default function RfqDashboardPage() {
                 disabled={savingDraft}
                 className="flex-1 py-2.5 rounded-xl bg-amber-800 text-white text-sm font-medium hover:bg-amber-900 disabled:opacity-60"
               >
-                {savingDraft ? 'שומר...' : 'שמור טיוטה ב-Gmail'}
+                {savingDraft ? 'שומר…' : 'שמור טיוטה ב-Gmail'}
               </button>
             </div>
           </div>

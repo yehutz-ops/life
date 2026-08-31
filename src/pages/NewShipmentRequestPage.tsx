@@ -24,15 +24,18 @@ interface RfqDocCategoryDef {
   key: ShipmentDocCategory
   label: string
 }
+// חמש קטגוריות המסמכים שרלוונטיות ל-RFQ עצמו (יש עוד קטגוריות ב-ShipmentDocCategory למסמכים שמצטרפים
+// בהמשך חיי המשלוח — awb/customs — לא כאן).
 const RFQ_DOC_CATEGORIES: RfqDocCategoryDef[] = [
   { key: 'invoice', label: 'Commercial Invoice' },
   { key: 'packing_list', label: 'Packing List' },
   { key: 'msds_sds', label: 'MSDS / SDS' },
+  { key: 'dangerous_goods', label: 'DG Declaration' },
   { key: 'other', label: 'מסמך נוסף' },
 ]
 
 // תוויות באנגלית עבור ה-PDF (מסמך בינלאומי) — נפרד מ-RFQ_DOC_CATEGORIES.label שמוצג בעברית ב-UI.
-// כולל את כל ה-ShipmentDocCategory לצורך שלמות הטיפוס, גם אם ב-RFQ עצמו רק 4 הקטגוריות ב-RFQ_DOC_CATEGORIES בשימוש בפועל.
+// כולל את כל ה-ShipmentDocCategory לצורך שלמות הטיפוס, גם אם ב-RFQ עצמו רק 5 הקטגוריות ב-RFQ_DOC_CATEGORIES בשימוש בפועל.
 const PDF_DOC_CATEGORY_LABEL: Record<ShipmentDocCategory, string> = {
   invoice: 'Commercial Invoice',
   packing_list: 'Packing List',
@@ -66,7 +69,7 @@ function fileToBase64(file: Blob): Promise<string> {
   })
 }
 
-// תגית מקור/חוסר/סתירה מתחת לשדה — הליבה של מסך ה-Review: לעולם לא ממציא ערך, ותמיד אפשר לערוך ידנית.
+// תגית מקור/חוסר/סתירה מתחת לשדה בעריכה — הליבה של מסך הבדיקה: לעולם לא ממציא ערך, ותמיד אפשר לערוך ידנית.
 function FieldHint({ meta, onPick }: { meta?: ShipmentFieldResult; onPick: (value: string, source: string) => void }) {
   if (!meta) return null
   if (meta.status === 'extracted' && meta.source) {
@@ -172,6 +175,29 @@ const AGENCY_FIELDS: QuickAddField[] = [
   },
 ]
 
+type StepNum = 1 | 2 | 3 | 4
+const STEP_DEFS: { n: StepNum; label: string }[] = [
+  { n: 1, label: 'העלאת מסמכים' },
+  { n: 2, label: 'בדיקת נתונים' },
+  { n: 3, label: 'בחירת סוכנויות' },
+  { n: 4, label: 'תצוגה מקדימה ושליחה' },
+]
+
+type SendStatus = 'sent' | 'failed' | 'pending'
+const SEND_STATUS_LABEL: Record<SendStatus, string> = { sent: 'נשלח ✓', failed: 'נכשל', pending: 'ממתין' }
+const SEND_STATUS_CLASS: Record<SendStatus, string> = {
+  sent: 'text-emerald-600 dark:text-emerald-400',
+  failed: 'text-red-600 dark:text-red-400',
+  pending: 'text-stone-400 dark:text-stone-500',
+}
+
+interface ReviewTile {
+  key: string
+  label: string
+  value: string
+  meta?: ShipmentFieldResult
+}
+
 export default function NewShipmentRequestPage() {
   const { forwarders, shipments, addForwarder, updateForwarder, addShipment, addShipmentDocument, addShipmentTimelineEvent, addRfqDispatch } = useStore()
   const notify = useNotify()
@@ -179,21 +205,35 @@ export default function NewShipmentRequestPage() {
   const confirm = useConfirm()
 
   const [form, setForm] = useState<FormState>(EMPTY_FORM)
-  // המזהה נקבע פעם אחת בכניסה למסך, כדי שיופיע כבר בתצוגה המקדימה של הנושא ושל ה-PDF.
+  // המזהה נקבע פעם אחת בכניסה למסך, כדי שיופיע כבר בתצוגה המקדימה של הנושא, של הרצועה הימנית ושל ה-PDF.
   const [rfqReference] = useState(() => nextRfqReference(shipments))
   const [docs, setDocs] = useState<LocalDoc[]>([])
   const fileInputRefs = useRef<Record<ShipmentDocCategory, HTMLInputElement | null>>({} as Record<ShipmentDocCategory, HTMLInputElement | null>)
 
   const intakeInputRef = useRef<HTMLInputElement>(null)
   const [pastedText, setPastedText] = useState('')
+  const [showPaste, setShowPaste] = useState(false)
+  const [dragOver, setDragOver] = useState(false)
   const [extracting, setExtracting] = useState(false)
   const [extractError, setExtractError] = useState('')
   const [fieldMeta, setFieldMeta] = useState<Partial<Record<keyof FormState, ShipmentFieldResult>>>({})
+  const [editingReview, setEditingReview] = useState(false)
   const [aiEnabled] = useState(getAiEnabled())
   const [aiHealthy, setAiHealthy] = useState<boolean | null>(null)
   const [emailHealthy, setEmailHealthy] = useState<boolean | null>(null)
   const [sending, setSending] = useState(false)
   const [showPdfPreview, setShowPdfPreview] = useState(false)
+  const [createdShipmentId, setCreatedShipmentId] = useState<string | null>(null)
+  const [sendResults, setSendResults] = useState<{ id: string; name: string; status: SendStatus }[] | null>(null)
+
+  const introRef = useRef<HTMLDivElement>(null)
+  const reviewRef = useRef<HTMLDivElement>(null)
+  const dispatchRef = useRef<HTMLDivElement>(null)
+  const sendPanelRef = useRef<HTMLDivElement>(null)
+  const sectionRefs: Record<StepNum, typeof introRef> = { 1: introRef, 2: reviewRef, 3: dispatchRef, 4: sendPanelRef }
+  function scrollToStep(step: StepNum) {
+    sectionRefs[step].current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
 
   useEffect(() => {
     checkAiHealth().then(setAiHealthy)
@@ -327,6 +367,7 @@ export default function NewShipmentRequestPage() {
       const result = await extractShipmentDetails(encodedFiles, pastedText.trim())
       applyExtractionResult(result)
       notify('הנתונים חולצו — אפשר לבדוק ולתקן למטה לפני השליחה', 'success')
+      requestAnimationFrame(() => scrollToStep(2))
     } catch (e: any) {
       setExtractError(e instanceof ShipmentExtractError ? e.message : 'משהו השתבש בזמן החילוץ. אפשר לנסות שוב, או למלא ידנית.')
     } finally {
@@ -412,6 +453,7 @@ export default function NewShipmentRequestPage() {
       requestedForwarderIds: selectedForwarders.map((f) => f.id),
       status: 'waiting_for_quotes',
     })
+    setCreatedShipmentId(shipment.id)
 
     await addShipmentTimelineEvent({
       shipmentId: shipment.id,
@@ -506,6 +548,14 @@ export default function NewShipmentRequestPage() {
       })
 
       notify(summaryParts.join(' · ') || 'הבקשה נשמרה', failed.length > 0 || skippedNoEmail > 0 ? 'error' : 'success')
+
+      // מציגים סטטוס לפי סוכנות ברצועה הימנית במקום לנווט מיד — זה החלק שהמשתמש ביקש לראות בפועל אחרי השליחה.
+      setSendResults(
+        selectedForwarders.map((f) => {
+          const r = results.find((x) => x.agencyId === f.id)
+          return { id: f.id, name: f.name, status: r ? (r.success ? 'sent' : 'failed') : 'pending' }
+        }),
+      )
     } catch (err: any) {
       await addShipmentTimelineEvent({
         shipmentId: shipment.id,
@@ -515,457 +565,689 @@ export default function NewShipmentRequestPage() {
       })
       await recordDispatches(shipment.id, null)
       notify(err instanceof RfqEmailError ? err.message : 'השליחה נכשלה. הבקשה נשמרה מקומית.', 'error')
+      setSendResults(selectedForwarders.map((f) => ({ id: f.id, name: f.name, status: 'failed' })))
     } finally {
       setSending(false)
     }
-
-    navigate(`/work/shipments/${shipment.id}`)
   }
 
   const inputClass = 'w-full border border-stone-200 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100 rounded-xl p-2.5 text-sm placeholder:text-stone-400'
   const labelClass = 'text-xs text-stone-500 dark:text-stone-400 block mb-1'
 
+  const reviewTiles: ReviewTile[] = [
+    { key: 'name', label: 'שם המשלוח', value: form.name, meta: fieldMeta.name },
+    { key: 'originCountry', label: 'מדינת מוצא', value: form.originCountry, meta: fieldMeta.originCountry },
+    { key: 'originCity', label: 'עיר מוצא', value: form.originCity, meta: fieldMeta.originCity },
+    { key: 'pickupAddress', label: 'כתובת איסוף', value: form.pickupAddress, meta: fieldMeta.pickupAddress },
+    { key: 'supplierName', label: 'ספק', value: form.supplierName, meta: fieldMeta.supplierName },
+    { key: 'contactPerson', label: 'איש קשר', value: form.contactPerson, meta: fieldMeta.contactPerson },
+    { key: 'contactEmail', label: 'אימייל', value: form.contactEmail, meta: fieldMeta.contactEmail },
+    { key: 'contactPhone', label: 'טלפון', value: form.contactPhone, meta: fieldMeta.contactPhone },
+    { key: 'readyDate', label: 'תאריך מוכנות', value: form.readyDate, meta: fieldMeta.readyDate },
+    { key: 'cartons', label: 'מספר ארגזים', value: form.cartons, meta: fieldMeta.cartons },
+    { key: 'weight', label: 'משקל כולל', value: form.weight ? `${form.weight} ק"ג` : '', meta: fieldMeta.weight },
+    { key: 'dimensions', label: 'מידות / נפח', value: form.dimensions, meta: fieldMeta.dimensions },
+    { key: 'goodsType', label: 'סוג סחורה', value: form.goodsType, meta: fieldMeta.goodsType },
+    { key: 'pallets', label: 'פלטות', value: form.onPallet ? `כן${form.palletCount ? ' · ' + form.palletCount : ''}` : 'לא', meta: fieldMeta.onPallet ?? fieldMeta.palletCount },
+    { key: 'dg', label: 'DG', value: form.isDangerousGoods ? 'כן' : 'לא', meta: fieldMeta.isDangerousGoods },
+    { key: 'mode', label: 'סוג שילוח', value: SHIPPING_MODE_LABEL[form.shippingMode] },
+  ]
+  const reviewed = Object.keys(fieldMeta).length > 0 || form.name.trim().length > 0
+  const missingCount = reviewTiles.filter((t) => t.meta && (!t.value || !t.value.trim())).length
+  const conflictCount = reviewTiles.filter((t) => t.meta?.status === 'conflict').length
+  const reviewStatusLabel = !reviewed ? 'ממתין לחילוץ' : conflictCount > 0 ? `${conflictCount} סתירות לבדיקה` : missingCount > 0 ? `${missingCount} שדות חסרים` : 'נבדק ומוכן'
+  const reviewStatusTone =
+    !reviewed
+      ? 'bg-stone-100 text-stone-500 dark:bg-stone-800 dark:text-stone-400'
+      : conflictCount > 0 || missingCount > 0
+        ? 'bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400'
+        : 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400'
+
+  const currentStep: StepNum = sendResults ? 4 : showPdfPreview ? 4 : reviewed && selectedForwarders.length > 0 ? 3 : reviewed ? 2 : 1
+
+  function openPdfPreview() {
+    setShowPdfPreview(true)
+    requestAnimationFrame(() => scrollToStep(4))
+  }
+
   return (
-    <div className="space-y-6 pb-24 max-w-3xl">
-      <div className="flex items-center gap-3">
-        <BackButton to="/work/shipments" label="משלוחים" />
-        <div className="flex items-center gap-2">
-          <TruckIcon className="w-6 h-6 text-stone-700 dark:text-stone-200" />
-          <h1 className="text-2xl font-bold text-stone-800 dark:text-stone-100">בקשת הצעת מחיר חדשה</h1>
+    <div className="max-w-[1440px] mx-auto space-y-5 pb-24">
+      {/* ===== שלבים + כותרת ===== */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-center gap-1.5 flex-wrap">
+          {STEP_DEFS.map((s, i) => (
+            <div key={s.n} className="flex items-center gap-1.5">
+              <button type="button" onClick={() => scrollToStep(s.n)} className="flex items-center gap-1.5 group">
+                <span
+                  className={`w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold shrink-0 transition-colors ${
+                    currentStep === s.n
+                      ? 'bg-amber-800 text-white'
+                      : currentStep > s.n
+                        ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400'
+                        : 'bg-stone-100 text-stone-400 dark:bg-stone-800 dark:text-stone-500 group-hover:bg-stone-200 dark:group-hover:bg-stone-700'
+                  }`}
+                >
+                  {currentStep > s.n ? '✓' : s.n}
+                </span>
+                <span className={`text-[11px] font-medium hidden sm:inline ${currentStep === s.n ? 'text-stone-800 dark:text-stone-100' : 'text-stone-400 dark:text-stone-500'}`}>
+                  {s.label}
+                </span>
+              </button>
+              {i < STEP_DEFS.length - 1 && <span className="w-5 h-px bg-stone-200 dark:bg-stone-700" />}
+            </div>
+          ))}
+        </div>
+
+        <div className="flex items-center gap-3">
+          <BackButton to="/work/shipments" label="משלוחים" />
+          <div className="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-950/30 flex items-center justify-center shrink-0">
+            <TruckIcon className="w-5 h-5 text-amber-800 dark:text-amber-400" />
+          </div>
+          <div className="min-w-0">
+            <h1 className="text-xl sm:text-2xl font-bold text-stone-800 dark:text-stone-100">בקשת הצעת מחיר חדשה</h1>
+            <p className="text-xs text-stone-400 dark:text-stone-500 mt-0.5">
+              בנה ושלח בקשת הצעת מחיר מובנית למספר סוכנויות שילוח — העלה את חומרי המשלוח וה-AI ימלא את השאר.
+            </p>
+          </div>
         </div>
       </div>
 
-      {/* העלה את פרטי המשלוח — AI Intake */}
-      <Card className="!border-violet-200 dark:!border-violet-900 !bg-violet-50/40 dark:!bg-violet-950/10">
-        <div className="flex items-center gap-2 mb-1">
-          <span className="text-lg">✨</span>
-          <h2 className="text-sm font-bold text-stone-800 dark:text-stone-100">העלה את פרטי המשלוח</h2>
-        </div>
-        <p className="text-xs text-stone-500 dark:text-stone-400 mb-4">
-          צרף/י PDF, Invoice, Packing List, MSDS/SDS, תמונה או צילום מסך, ו/או הדביק/י טקסט — Claude יקרא הכול ביחד וימלא אוטומטית את השדות למטה, שיהפכו למסך בדיקה ואישור. אפשר גם להמשיך במילוי ידני רגיל.
-        </p>
-
-        {!aiEnabled && (
-          <p className="text-xs text-stone-500 dark:text-stone-400 mb-3">חיבור Claude AI כבוי בהגדרות המערכת — אפשר למלא את הטופס ידנית למטה.</p>
-        )}
-        {aiEnabled && aiHealthy === false && (
-          <p className="text-xs text-stone-500 dark:text-stone-400 mb-3">חיבור Claude AI עדיין לא הוגדר במערכת — אפשר למלא את הטופס ידנית למטה.</p>
-        )}
-
-        <div className="flex flex-wrap items-center gap-2 mb-3">
-          <button
-            type="button"
-            onClick={() => intakeInputRef.current?.click()}
-            className="px-4 py-2.5 rounded-xl border-2 border-dashed border-violet-300 dark:border-violet-800 text-sm text-violet-700 dark:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-950/30"
-          >
-            📎 צרף קבצים
-          </button>
-          <input
-            ref={intakeInputRef}
-            type="file"
-            multiple
-            className="hidden"
-            onChange={(e) => {
-              handleIntakeFilesPicked(e.target.files)
-              e.target.value = ''
-            }}
-          />
-        </div>
-
-        {docs.length > 0 && (
-          <div className="flex flex-wrap gap-1.5 mb-3">
-            {docs.map((d) => (
-              <span
-                key={d.id}
-                className="inline-flex items-center gap-1.5 text-[11px] px-2.5 py-1 rounded-full bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-700 text-stone-600 dark:text-stone-300"
-              >
-                {d.file.name}
-                <button onClick={() => removeDoc(d.id)} className="text-stone-300 hover:text-red-500" aria-label="הסר">
-                  ✕
-                </button>
-              </span>
-            ))}
-          </div>
-        )}
-
-        <div className="mb-3">
-          <label className={labelClass}>או הדביק/י טקסט (מייל, הודעה, טבלה)</label>
-          <textarea
-            value={pastedText}
-            onChange={(e) => setPastedText(e.target.value)}
-            rows={4}
-            dir="auto"
-            placeholder="לדוגמה: תוכן מייל מהספק עם פרטי המשלוח..."
-            className={`${inputClass} resize-none`}
-          />
-        </div>
-
-        <button
-          type="button"
-          onClick={handleExtract}
-          disabled={extracting || !aiEnabled || aiHealthy === false}
-          className="px-5 py-2.5 rounded-xl bg-violet-700 text-white text-sm font-medium hover:bg-violet-800 disabled:opacity-50"
-        >
-          {extracting ? 'קורא ומחלץ נתונים...' : '✨ חלץ נתונים אוטומטית'}
-        </button>
-
-        {extractError && <p className="text-xs text-red-600 dark:text-red-400 mt-2">{extractError}</p>}
-      </Card>
-
-      {/* 1. פרטי המשלוח */}
-      <Card>
-        <h2 className="text-sm font-bold text-stone-800 dark:text-stone-100 mb-4">פרטי המשלוח</h2>
-        <div className="space-y-3">
-          <div>
-            <label className={labelClass}>שם / כותרת למשלוח</label>
-            <input value={form.name} onChange={(e) => set('name', e.target.value)} placeholder="לדוגמה: משלוח בשמים — ספטמבר" dir="auto" className={inputClass} />
-            <FieldHint meta={fieldMeta.name} onPick={(v, s) => applyFieldValue('name', v, s)} />
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className={labelClass}>מדינת מוצא</label>
-              <input value={form.originCountry} onChange={(e) => set('originCountry', e.target.value)} dir="auto" className={inputClass} />
-              <FieldHint meta={fieldMeta.originCountry} onPick={(v, s) => applyFieldValue('originCountry', v, s)} />
+      {/* ===== עמודה ראשית + רצועת סיכום ===== */}
+      <div className="grid grid-cols-1 lg:grid-cols-[320px_minmax(0,1fr)] gap-5 items-start">
+        {/* ===== רצועת סיכום ימנית ===== */}
+        <div className="lg:sticky lg:top-6 space-y-4 order-2 lg:order-1">
+          <Card className="!p-5">
+            <div className="flex items-center gap-2 mb-4">
+              <span className="text-base">📋</span>
+              <h2 className="text-sm font-bold text-stone-800 dark:text-stone-100">סיכום הבקשה</h2>
             </div>
-            <div>
-              <label className={labelClass}>עיר / מקום איסוף</label>
-              <input value={form.originCity} onChange={(e) => set('originCity', e.target.value)} dir="auto" className={inputClass} />
-              <FieldHint meta={fieldMeta.originCity} onPick={(v, s) => applyFieldValue('originCity', v, s)} />
-            </div>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className={labelClass}>סוג שילוח</label>
-              <select value={form.shippingMode} onChange={(e) => set('shippingMode', e.target.value as ShippingMode)} className={inputClass}>
-                <option value="air">אווירי</option>
-                <option value="sea">ימי</option>
-                <option value="other">אחר</option>
-              </select>
-            </div>
-            <div>
-              <label className={labelClass}>תאריך מוכנות לאיסוף</label>
-              <input type="date" value={form.readyDate} onChange={(e) => set('readyDate', e.target.value)} className={inputClass} />
-              <FieldHint meta={fieldMeta.readyDate} onPick={(v, s) => applyFieldValue('readyDate', v, s)} />
-            </div>
-          </div>
-        </div>
-      </Card>
 
-      {/* 2. פרטי המטען */}
-      <Card>
-        <h2 className="text-sm font-bold text-stone-800 dark:text-stone-100 mb-4">פרטי המטען</h2>
-        <div className="space-y-3">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className={labelClass}>מספר ארגזים</label>
-              <input type="number" value={form.cartons} onChange={(e) => set('cartons', e.target.value)} className={inputClass} />
-              <FieldHint meta={fieldMeta.cartons} onPick={(v, s) => applyFieldValue('cartons', v, s)} />
-            </div>
-            <div>
-              <label className={labelClass}>משקל כולל (ק"ג)</label>
-              <input type="number" value={form.weight} onChange={(e) => set('weight', e.target.value)} className={inputClass} />
-              <FieldHint meta={fieldMeta.weight} onPick={(v, s) => applyFieldValue('weight', v, s)} />
-            </div>
-          </div>
-          <div>
-            <label className={labelClass}>מידות / נפח (אם ידועים)</label>
-            <input value={form.dimensions} onChange={(e) => set('dimensions', e.target.value)} dir="auto" className={inputClass} />
-            <FieldHint meta={fieldMeta.dimensions} onPick={(v, s) => applyFieldValue('dimensions', v, s)} />
-          </div>
-          <div>
-            <div className="flex items-center gap-3">
-              <label className="flex items-center gap-2 text-sm text-stone-700 dark:text-stone-200">
-                <input type="checkbox" checked={form.onPallet} onChange={(e) => set('onPallet', e.target.checked)} className="accent-amber-800 w-4 h-4" />
-                המשלוח על פלטה
-              </label>
-              {form.onPallet && (
-                <input
-                  type="number"
-                  value={form.palletCount}
-                  onChange={(e) => set('palletCount', e.target.value)}
-                  placeholder="מספר פלטות"
-                  className="w-32 border border-stone-200 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100 rounded-xl p-2 text-sm"
-                />
-              )}
-            </div>
-            <FieldHint meta={fieldMeta.onPallet} onPick={(v, s) => applyFieldValue('onPallet', v, s)} />
-            {form.onPallet && <FieldHint meta={fieldMeta.palletCount} onPick={(v, s) => applyFieldValue('palletCount', v, s)} />}
-          </div>
-          <div>
-            <label className={labelClass}>סוג הסחורה</label>
-            <input value={form.goodsType} onChange={(e) => set('goodsType', e.target.value)} placeholder="לדוגמה: בשמים" dir="auto" className={inputClass} />
-            <FieldHint meta={fieldMeta.goodsType} onPick={(v, s) => applyFieldValue('goodsType', v, s)} />
-          </div>
-          <div>
-            <label className="flex items-center gap-2 text-sm text-stone-700 dark:text-stone-200">
-              <input type="checkbox" checked={form.isDangerousGoods} onChange={(e) => set('isDangerousGoods', e.target.checked)} className="accent-amber-800 w-4 h-4" />
-              Dangerous Goods / DG
-            </label>
-            <FieldHint meta={fieldMeta.isDangerousGoods} onPick={(v, s) => applyFieldValue('isDangerousGoods', v, s)} />
-          </div>
-        </div>
-      </Card>
-
-      {/* 3. פרטי האיסוף / הספק */}
-      <Card>
-        <h2 className="text-sm font-bold text-stone-800 dark:text-stone-100 mb-4">פרטי האיסוף / הספק</h2>
-        <div className="space-y-3">
-          <div>
-            <label className={labelClass}>שם החברה / הספק</label>
-            <input value={form.supplierName} onChange={(e) => set('supplierName', e.target.value)} dir="auto" className={inputClass} />
-            <FieldHint meta={fieldMeta.supplierName} onPick={(v, s) => applyFieldValue('supplierName', v, s)} />
-          </div>
-          <div>
-            <label className={labelClass}>כתובת מלאה לאיסוף</label>
-            <input value={form.pickupAddress} onChange={(e) => set('pickupAddress', e.target.value)} dir="auto" className={inputClass} />
-            <FieldHint meta={fieldMeta.pickupAddress} onPick={(v, s) => applyFieldValue('pickupAddress', v, s)} />
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div>
-              <label className={labelClass}>איש קשר</label>
-              <input value={form.contactPerson} onChange={(e) => set('contactPerson', e.target.value)} dir="auto" className={inputClass} />
-              <FieldHint meta={fieldMeta.contactPerson} onPick={(v, s) => applyFieldValue('contactPerson', v, s)} />
-            </div>
-            <div>
-              <label className={labelClass}>אימייל</label>
-              <input value={form.contactEmail} onChange={(e) => set('contactEmail', e.target.value)} dir="ltr" className={inputClass} />
-              <FieldHint meta={fieldMeta.contactEmail} onPick={(v, s) => applyFieldValue('contactEmail', v, s)} />
-            </div>
-            <div>
-              <label className={labelClass}>טלפון</label>
-              <input value={form.contactPhone} onChange={(e) => set('contactPhone', e.target.value)} dir="ltr" className={inputClass} />
-              <FieldHint meta={fieldMeta.contactPhone} onPick={(v, s) => applyFieldValue('contactPhone', v, s)} />
-            </div>
-          </div>
-        </div>
-      </Card>
-
-      {/* 4. מסמכים */}
-      <Card>
-        <h2 className="text-sm font-bold text-stone-800 dark:text-stone-100 mb-4">מסמכים</h2>
-        <div className="space-y-4">
-          {RFQ_DOC_CATEGORIES.map((cat) => {
-            const catDocs = docs.filter((d) => d.category === cat.key)
-            return (
-              <div key={cat.key}>
-                <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-xs font-medium text-stone-600 dark:text-stone-300">{cat.label}</span>
-                  <button
-                    onClick={() => fileInputRefs.current[cat.key]?.click()}
-                    className="text-xs font-medium text-amber-800 dark:text-amber-400 hover:underline"
-                  >
-                    + הוסף קובץ
-                  </button>
-                  <input
-                    ref={(el) => (fileInputRefs.current[cat.key] = el)}
-                    type="file"
-                    multiple
-                    className="hidden"
-                    onChange={(e) => {
-                      handleFilePicked(cat.key, e.target.files)
-                      e.target.value = ''
-                    }}
-                  />
+            <div className="space-y-3.5">
+              <div>
+                <div className="text-[11px] text-stone-400 dark:text-stone-500">מספר בקשה (RFQ)</div>
+                <div className="text-base font-bold text-stone-800 dark:text-stone-100" dir="ltr" style={{ direction: 'ltr', textAlign: 'right' }}>
+                  {rfqReference}
                 </div>
-                {catDocs.length === 0 ? (
-                  <div className="text-xs text-stone-300 dark:text-stone-600">לא צורף קובץ</div>
-                ) : (
-                  <ul className="space-y-1.5">
-                    {catDocs.map((d) => (
-                      <li key={d.id} className="flex items-center justify-between gap-2 bg-stone-50 dark:bg-stone-800 rounded-xl px-3 py-2 text-xs">
-                        <span className="text-stone-700 dark:text-stone-200 truncate">
-                          {d.file.name}
-                          {!SUPPORTED_EXTRACT_TYPES.includes(d.file.type) && (
-                            <span className="text-stone-400 dark:text-stone-500"> · לא נקרא אוטומטית</span>
-                          )}
-                        </span>
-                        <div className="flex items-center gap-2 shrink-0">
-                          <span className="text-stone-400 dark:text-stone-500">{formatFileSize(d.file.size)}</span>
-                          <button onClick={() => removeDoc(d.id)} className="text-stone-300 hover:text-red-500" aria-label="הסר">
-                            ✕
-                          </button>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
+              </div>
+
+              <div className="grid grid-cols-2 gap-x-3 gap-y-3 pt-3 border-t border-stone-100 dark:border-stone-800">
+                <div>
+                  <div className="text-lg font-bold text-stone-800 dark:text-stone-100">{selectedForwarders.length}</div>
+                  <div className="text-[10.5px] text-stone-400 dark:text-stone-500">סוכנויות נבחרו</div>
+                </div>
+                <div>
+                  <div className="text-lg font-bold text-stone-800 dark:text-stone-100">{docs.length + 1}</div>
+                  <div className="text-[10.5px] text-stone-400 dark:text-stone-500">מסמכים בחבילה</div>
+                </div>
+                <div>
+                  <div className="text-sm font-semibold text-stone-800 dark:text-stone-100">{SHIPPING_MODE_LABEL[form.shippingMode]}</div>
+                  <div className="text-[10.5px] text-stone-400 dark:text-stone-500">אופן המשלוח</div>
+                </div>
+                <div>
+                  <div className="text-sm font-semibold text-stone-800 dark:text-stone-100">{showPdfPreview ? 'נוצרה' : 'טרם נוצרה'}</div>
+                  <div className="text-[10.5px] text-stone-400 dark:text-stone-500">סטטוס PDF</div>
+                </div>
+              </div>
+
+              <div className={`flex items-center gap-1.5 text-xs font-medium px-2.5 py-1.5 rounded-lg ${reviewStatusTone}`}>
+                <span>{!reviewed ? '○' : conflictCount > 0 || missingCount > 0 ? '⚠' : '✓'}</span>
+                <span>סטטוס: {reviewStatusLabel}</span>
+              </div>
+            </div>
+
+            <div className="space-y-2 pt-4 mt-4 border-t border-stone-100 dark:border-stone-800">
+              <button
+                type="button"
+                onClick={openPdfPreview}
+                className="w-full px-4 py-2.5 rounded-xl border border-stone-200 dark:border-stone-700 text-sm font-medium text-stone-600 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-800"
+              >
+                📄 צור PDF לתצוגה מקדימה
+              </button>
+              <button
+                type="button"
+                onClick={handleReady}
+                disabled={sending || !!sendResults}
+                className="w-full px-4 py-3 rounded-xl bg-amber-800 text-white text-sm font-medium hover:bg-amber-900 disabled:opacity-50 flex items-center justify-center gap-1.5"
+              >
+                <span>✈</span>
+                {sending ? 'שולח...' : sendResults ? 'נשלח' : 'שלח בקשת הצעת מחיר'}
+              </button>
+            </div>
+
+            <p className="text-[10.5px] text-stone-400 dark:text-stone-500 mt-2.5 leading-relaxed">
+              הבקשה תישלח בנפרד לכל סוכנות מייל פרטני בקובץ PDF מצורף.
+            </p>
+
+            {sendResults && (
+              <div className="pt-3 mt-3 border-t border-stone-100 dark:border-stone-800 space-y-1.5">
+                <div className="text-[11px] font-semibold text-stone-500 dark:text-stone-400 mb-1">סטטוס שליחה לפי סוכנות</div>
+                {sendResults.map((r) => (
+                  <div key={r.id} className="flex items-center justify-between gap-2 text-xs">
+                    <span className="text-stone-700 dark:text-stone-200 truncate">{r.name}</span>
+                    <span className={`font-medium shrink-0 ${SEND_STATUS_CLASS[r.status]}`}>{SEND_STATUS_LABEL[r.status]}</span>
+                  </div>
+                ))}
+                {createdShipmentId && (
+                  <Link
+                    to={`/work/shipments/${createdShipmentId}`}
+                    className="inline-flex items-center gap-1 text-[11px] font-medium text-amber-800 dark:text-amber-400 hover:opacity-70 pt-1"
+                  >
+                    לצפייה במשלוח ←
+                  </Link>
                 )}
               </div>
-            )
-          })}
+            )}
+          </Card>
         </div>
-      </Card>
 
-      {/* מסמך RFQ כ-PDF — המסמך שיישלח בפועל לכל סוכנות */}
-      <Card>
-        <h2 className="text-sm font-bold text-stone-800 dark:text-stone-100 mb-1">מסמך בקשת הצעת מחיר (PDF)</h2>
-        <p className="text-xs text-stone-400 dark:text-stone-500 mb-4">
-          זהו המסמך המרכזי שיישלח לכל סוכנות. התצוגה מתעדכנת אוטומטית עם כל שינוי בשדות למעלה — אין צורך ליצור מחדש ידנית.
-        </p>
+        {/* ===== עמודה ראשית ===== */}
+        <div className="space-y-5 min-w-0 order-1 lg:order-2">
+          {/* שלב 1 — AI Intake */}
+          <div ref={introRef} className="scroll-mt-6">
+            <Card className="!border-violet-200 dark:!border-violet-900 !bg-violet-50/30 dark:!bg-violet-950/10">
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-lg">✨</span>
+                <h2 className="text-sm font-bold text-stone-800 dark:text-stone-100">העלה את פרטי המשלוח</h2>
+              </div>
+              <p className="text-xs text-stone-500 dark:text-stone-400 mb-4">
+                גרור/י ושחרר קבצים כאן, או בחר/י לפי סוג — Invoice, Packing List, MSDS/SDS, PDF, צילומי מסך ומסמכי ספק. אפשר גם להדביק טקסט חופשי מייל/וואטסאפ. Claude יקרא הכול ביחד וימלא אוטומטית את שדות המשלוח למטה, שיהפכו למסך בדיקה ואישור.
+              </p>
 
-        {!showPdfPreview ? (
-          <button
-            type="button"
-            onClick={() => setShowPdfPreview(true)}
-            className="px-4 py-2.5 rounded-xl bg-amber-800 text-white text-sm font-medium hover:bg-amber-900"
-          >
-            📄 צור PDF לתצוגה מקדימה
-          </button>
-        ) : (
-          <>
-            <div className="rounded-xl overflow-hidden border border-stone-200 dark:border-stone-700 h-[400px] sm:h-[600px]">
-              <PDFViewer width="100%" height="100%" showToolbar={false} style={{ border: 'none' }}>
-                <RfqPdfDocument data={pdfData} documents={pdfDocuments} />
-              </PDFViewer>
-            </div>
-            <div className="mt-3">
-              <PDFDownloadLink
-                document={<RfqPdfDocument data={pdfData} documents={pdfDocuments} />}
-                fileName={`RFQ-${form.name.trim() || 'shipment'}.pdf`}
-                className="inline-block px-4 py-2.5 rounded-xl border border-stone-200 dark:border-stone-700 text-sm font-medium text-stone-600 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-800"
+              {!aiEnabled && <p className="text-xs text-stone-500 dark:text-stone-400 mb-3">חיבור Claude AI כבוי בהגדרות המערכת — אפשר למלא ולשלוח ידנית.</p>}
+              {aiEnabled && aiHealthy === false && <p className="text-xs text-stone-500 dark:text-stone-400 mb-3">חיבור Claude AI עדיין לא הוגדר במערכת — אפשר למלא ולשלוח ידנית.</p>}
+
+              {/* קיצורי דרך לפי סוג מסמך + טקסט מודבק */}
+              <div className="flex flex-wrap items-center gap-1.5 mb-3">
+                <button
+                  type="button"
+                  onClick={() => setShowPaste((v) => !v)}
+                  className={`inline-flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-1.5 rounded-full border transition-colors ${
+                    showPaste
+                      ? 'bg-amber-800 text-white border-amber-800'
+                      : 'bg-white dark:bg-stone-900 text-stone-600 dark:text-stone-300 border-stone-200 dark:border-stone-700 hover:border-stone-300 dark:hover:border-stone-600'
+                  }`}
+                >
+                  <span>📝</span> הדבק טקסט
+                </button>
+                <button
+                  type="button"
+                  onClick={() => intakeInputRef.current?.click()}
+                  className="inline-flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-1.5 rounded-full border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-900 text-stone-600 dark:text-stone-300 hover:border-stone-300 dark:hover:border-stone-600"
+                >
+                  <span>📷</span> צילום מסך
+                </button>
+                {RFQ_DOC_CATEGORIES.map((cat) => (
+                  <button
+                    key={cat.key}
+                    type="button"
+                    onClick={() => fileInputRefs.current[cat.key]?.click()}
+                    className="inline-flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-1.5 rounded-full border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-900 text-stone-600 dark:text-stone-300 hover:border-stone-300 dark:hover:border-stone-600"
+                  >
+                    <span>📎</span> {cat.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Dropzone */}
+              <div
+                onDragOver={(e) => {
+                  e.preventDefault()
+                  setDragOver(true)
+                }}
+                onDragLeave={() => setDragOver(false)}
+                onDrop={(e) => {
+                  e.preventDefault()
+                  setDragOver(false)
+                  handleIntakeFilesPicked(e.dataTransfer.files)
+                }}
+                onClick={() => intakeInputRef.current?.click()}
+                className={`rounded-2xl border-2 border-dashed p-6 text-center cursor-pointer transition-colors mb-3 ${
+                  dragOver
+                    ? 'border-violet-400 bg-violet-50 dark:bg-violet-950/30'
+                    : 'border-violet-200 dark:border-violet-900 hover:bg-violet-50/60 dark:hover:bg-violet-950/20'
+                }`}
               >
-                {({ loading }) => (loading ? 'מכין PDF...' : '⬇ הורד PDF')}
-              </PDFDownloadLink>
-            </div>
-          </>
-        )}
-      </Card>
+                <div className="text-2xl mb-1.5">☁️</div>
+                <div className="text-sm font-medium text-stone-700 dark:text-stone-200">גרור ושחרר קבצים כאן או לחץ לבחירה</div>
+                <div className="text-[11px] text-stone-400 dark:text-stone-500 mt-1">ניתן לצרף מספר קבצים בבת אחת · PDF, JPG, PNG · עד 10MB לקובץ</div>
+              </div>
+              <input
+                ref={intakeInputRef}
+                type="file"
+                multiple
+                className="hidden"
+                onChange={(e) => {
+                  handleIntakeFilesPicked(e.target.files)
+                  e.target.value = ''
+                }}
+              />
+              {/* אינפוטים חבויים לכל קטגוריית מסמך — משרתים גם את הכפתורים כאן וגם את רשימת "מסמכים" בהמשך */}
+              {RFQ_DOC_CATEGORIES.map((cat) => (
+                <input
+                  key={cat.key}
+                  ref={(el) => (fileInputRefs.current[cat.key] = el)}
+                  type="file"
+                  multiple
+                  className="hidden"
+                  onChange={(e) => {
+                    handleFilePicked(cat.key, e.target.files)
+                    e.target.value = ''
+                  }}
+                />
+              ))}
 
-      {/* 5. סוכנויות לקבלת הצעת מחיר */}
-      <Card>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-sm font-bold text-stone-800 dark:text-stone-100">סוכנויות לקבלת הצעת מחיר</h2>
-          <button onClick={() => setAgencyModal({ open: true })} className="text-xs font-medium text-amber-800 dark:text-amber-400 hover:underline">
-            + הוסף סוכנות
-          </button>
-        </div>
-
-        <div className="flex items-center gap-2 mb-4">
-          <button
-            onClick={() => setSelectionMode('all-active')}
-            className={`px-3.5 py-1.5 rounded-full text-xs font-medium border transition-colors ${
-              selectionMode === 'all-active' ? 'bg-amber-800 text-white border-amber-800' : 'bg-white text-stone-500 border-stone-200 dark:bg-stone-900 dark:text-stone-400 dark:border-stone-700'
-            }`}
-          >
-            שלח לכל הסוכנויות הפעילות ({activeForwarders.length})
-          </button>
-          <button
-            onClick={() => setSelectionMode('manual')}
-            className={`px-3.5 py-1.5 rounded-full text-xs font-medium border transition-colors ${
-              selectionMode === 'manual' ? 'bg-amber-800 text-white border-amber-800' : 'bg-white text-stone-500 border-stone-200 dark:bg-stone-900 dark:text-stone-400 dark:border-stone-700'
-            }`}
-          >
-            בחירה ידנית
-          </button>
-        </div>
-
-        {forwarders.length === 0 ? (
-          <p className="text-xs text-stone-400 dark:text-stone-500">עדיין אין סוכנויות שמורות — הוסף את הראשונה למעלה.</p>
-        ) : (
-          <ul className="divide-y divide-stone-50 dark:divide-stone-800">
-            {forwarders.map((f) => {
-              const isActive = f.active !== false
-              const checked = selectionMode === 'all-active' ? isActive : manualSelectedIds.includes(f.id)
-              return (
-                <li key={f.id} className="py-2.5 flex items-center gap-3">
-                  {selectionMode === 'manual' ? (
-                    <input type="checkbox" checked={checked} onChange={() => toggleManual(f.id)} className="accent-amber-800 w-4 h-4 shrink-0" />
-                  ) : (
-                    <span className={`w-4 h-4 rounded shrink-0 ${checked ? 'bg-amber-800' : 'bg-stone-100 dark:bg-stone-800'}`} />
-                  )}
-                  <div className="min-w-0 flex-1">
-                    <div className="text-sm text-stone-800 dark:text-stone-100 truncate">{f.name}</div>
-                    <div className="text-xs text-stone-400 dark:text-stone-500 truncate">
-                      {[f.contactPerson, f.email, f.phone].filter(Boolean).join(' · ') || '—'}
+              {docs.length > 0 && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-3">
+                  {docs.map((d) => (
+                    <div
+                      key={d.id}
+                      className="flex items-center gap-2 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-700 rounded-xl px-3 py-2 text-xs"
+                    >
+                      <span className="text-emerald-500 shrink-0">✓</span>
+                      <div className="min-w-0 flex-1">
+                        <div className="text-stone-700 dark:text-stone-200 truncate">{d.file.name}</div>
+                        <div className="text-[10px] text-stone-400 dark:text-stone-500">
+                          {RFQ_DOC_CATEGORIES.find((c) => c.key === d.category)?.label ?? 'מסמך נוסף'} · {formatFileSize(d.file.size)}
+                          {!SUPPORTED_EXTRACT_TYPES.includes(d.file.type) && ' · לא נקרא אוטומטית'}
+                        </div>
+                      </div>
+                      <button onClick={() => removeDoc(d.id)} className="text-stone-300 hover:text-red-500 shrink-0" aria-label="הסר">
+                        ✕
+                      </button>
                     </div>
+                  ))}
+                </div>
+              )}
+
+              {showPaste && (
+                <div className="mb-3">
+                  <label className={labelClass}>הדבק/י טקסט (מייל, וואטסאפ, הודעת ספק)</label>
+                  <textarea
+                    value={pastedText}
+                    onChange={(e) => setPastedText(e.target.value)}
+                    rows={4}
+                    dir="auto"
+                    placeholder="לדוגמה: תוכן מייל מהספק עם פרטי המשלוח..."
+                    className={`${inputClass} resize-none`}
+                  />
+                </div>
+              )}
+
+              <button
+                type="button"
+                onClick={handleExtract}
+                disabled={extracting || !aiEnabled || aiHealthy === false}
+                className="px-5 py-2.5 rounded-xl bg-violet-700 text-white text-sm font-medium hover:bg-violet-800 disabled:opacity-50"
+              >
+                {extracting ? 'קורא ומחלץ נתונים...' : '✨ חלץ נתונים אוטומטית'}
+              </button>
+
+              {extractError && <p className="text-xs text-red-600 dark:text-red-400 mt-2">{extractError}</p>}
+            </Card>
+          </div>
+
+          {/* שלב 2 — בדיקת נתונים */}
+          {(docs.length > 0 || reviewed) && (
+            <div ref={reviewRef} className="scroll-mt-6">
+              <Card>
+                <div className="flex items-center justify-between mb-4 gap-2 flex-wrap">
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-sm font-bold text-stone-800 dark:text-stone-100">נתוני המשלוח שחולצו</h2>
+                    <span className={`text-[10.5px] font-medium px-2 py-0.5 rounded-full ${reviewStatusTone}`}>{reviewStatusLabel}</span>
                   </div>
                   <button
-                    onClick={() => handleToggleActive(f)}
-                    className={`text-[11px] font-medium px-2 py-1 rounded-full shrink-0 ${
-                      isActive ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400' : 'bg-stone-100 text-stone-500 dark:bg-stone-800 dark:text-stone-400'
-                    }`}
+                    type="button"
+                    onClick={() => setEditingReview((v) => !v)}
+                    className="text-xs font-medium text-amber-800 dark:text-amber-400 hover:underline"
                   >
-                    {isActive ? 'פעיל' : 'לא פעיל'}
+                    {editingReview ? 'סיום עריכה' : 'ערוך נתונים'}
                   </button>
-                  <button
-                    onClick={() => setAgencyModal({ open: true, editingId: f.id })}
-                    className="text-xs font-medium text-amber-800 dark:text-amber-400 hover:underline shrink-0"
-                  >
-                    ערוך
-                  </button>
-                </li>
-              )
-            })}
-          </ul>
-        )}
-      </Card>
+                </div>
 
-      {/* 6. Preview לפני שליחה */}
-      <Card>
-        <h2 className="text-sm font-bold text-stone-800 dark:text-stone-100 mb-1">תצוגה מקדימה של המייל</h2>
-        <p className="text-xs text-stone-400 dark:text-stone-500 mb-4">כל סוכנות תקבל מייל נפרד עם אותו תוכן — לא CC משותף.</p>
+                {!editingReview ? (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5">
+                    {reviewTiles.map((t) => {
+                      const empty = !t.value || !t.value.trim()
+                      const conflict = t.meta?.status === 'conflict'
+                      return (
+                        <div
+                          key={t.key}
+                          className={`rounded-xl border p-2.5 ${
+                            conflict
+                              ? 'border-amber-300 dark:border-amber-800 bg-amber-50/60 dark:bg-amber-950/20'
+                              : empty
+                                ? 'border-dashed border-stone-200 dark:border-stone-700 bg-stone-50/40 dark:bg-stone-800/20'
+                                : 'border-stone-100 dark:border-stone-800 bg-stone-50/60 dark:bg-stone-800/40'
+                          }`}
+                        >
+                          <div className="text-[10.5px] text-stone-500 dark:text-stone-400 mb-0.5 truncate">{t.label}</div>
+                          <div className={`text-[13px] font-semibold truncate ${empty ? 'text-stone-300 dark:text-stone-600' : 'text-stone-800 dark:text-stone-100'}`}>
+                            {empty ? '—' : t.value}
+                          </div>
+                          {t.meta?.status === 'extracted' && t.meta.source && (
+                            <div className="text-[10px] text-violet-700 dark:text-violet-400 mt-1 truncate">✨ {t.meta.source}</div>
+                          )}
+                          {conflict && <div className="text-[10px] text-amber-700 dark:text-amber-400 mt-1">⚠ נמצאה סתירה — ערוך/י נתונים</div>}
+                          {empty && !conflict && <div className="text-[10px] text-stone-400 dark:text-stone-500 mt-1">חסר מידע</div>}
+                        </div>
+                      )
+                    })}
+                  </div>
+                ) : (
+                  <div className="space-y-5">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div className="sm:col-span-2">
+                        <label className={labelClass}>שם / כותרת למשלוח</label>
+                        <input value={form.name} onChange={(e) => set('name', e.target.value)} placeholder="לדוגמה: משלוח בשמים — ספטמבר" dir="auto" className={inputClass} />
+                        <FieldHint meta={fieldMeta.name} onPick={(v, s) => applyFieldValue('name', v, s)} />
+                      </div>
+                      <div>
+                        <label className={labelClass}>מדינת מוצא</label>
+                        <input value={form.originCountry} onChange={(e) => set('originCountry', e.target.value)} dir="auto" className={inputClass} />
+                        <FieldHint meta={fieldMeta.originCountry} onPick={(v, s) => applyFieldValue('originCountry', v, s)} />
+                      </div>
+                      <div>
+                        <label className={labelClass}>עיר / מקום איסוף</label>
+                        <input value={form.originCity} onChange={(e) => set('originCity', e.target.value)} dir="auto" className={inputClass} />
+                        <FieldHint meta={fieldMeta.originCity} onPick={(v, s) => applyFieldValue('originCity', v, s)} />
+                      </div>
+                      <div>
+                        <label className={labelClass}>סוג שילוח</label>
+                        <select value={form.shippingMode} onChange={(e) => set('shippingMode', e.target.value as ShippingMode)} className={inputClass}>
+                          <option value="air">אווירי</option>
+                          <option value="sea">ימי</option>
+                          <option value="other">אחר</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className={labelClass}>תאריך מוכנות לאיסוף</label>
+                        <input type="date" value={form.readyDate} onChange={(e) => set('readyDate', e.target.value)} className={inputClass} />
+                        <FieldHint meta={fieldMeta.readyDate} onPick={(v, s) => applyFieldValue('readyDate', v, s)} />
+                      </div>
+                      <div>
+                        <label className={labelClass}>מספר ארגזים</label>
+                        <input type="number" value={form.cartons} onChange={(e) => set('cartons', e.target.value)} className={inputClass} />
+                        <FieldHint meta={fieldMeta.cartons} onPick={(v, s) => applyFieldValue('cartons', v, s)} />
+                      </div>
+                      <div>
+                        <label className={labelClass}>משקל כולל (ק"ג)</label>
+                        <input type="number" value={form.weight} onChange={(e) => set('weight', e.target.value)} className={inputClass} />
+                        <FieldHint meta={fieldMeta.weight} onPick={(v, s) => applyFieldValue('weight', v, s)} />
+                      </div>
+                      <div>
+                        <label className={labelClass}>מידות / נפח (אם ידועים)</label>
+                        <input value={form.dimensions} onChange={(e) => set('dimensions', e.target.value)} dir="auto" className={inputClass} />
+                        <FieldHint meta={fieldMeta.dimensions} onPick={(v, s) => applyFieldValue('dimensions', v, s)} />
+                      </div>
+                      <div>
+                        <label className={labelClass}>סוג הסחורה</label>
+                        <input value={form.goodsType} onChange={(e) => set('goodsType', e.target.value)} placeholder="לדוגמה: בשמים" dir="auto" className={inputClass} />
+                        <FieldHint meta={fieldMeta.goodsType} onPick={(v, s) => applyFieldValue('goodsType', v, s)} />
+                      </div>
+                      <div className="flex items-end gap-3">
+                        <label className="flex items-center gap-2 text-sm text-stone-700 dark:text-stone-200 mb-2.5">
+                          <input type="checkbox" checked={form.onPallet} onChange={(e) => set('onPallet', e.target.checked)} className="accent-amber-800 w-4 h-4" />
+                          על פלטה
+                        </label>
+                        {form.onPallet && (
+                          <input
+                            type="number"
+                            value={form.palletCount}
+                            onChange={(e) => set('palletCount', e.target.value)}
+                            placeholder="מספר פלטות"
+                            className="flex-1 border border-stone-200 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100 rounded-xl p-2 text-sm mb-2"
+                          />
+                        )}
+                      </div>
+                      <div>
+                        <label className="flex items-center gap-2 text-sm text-stone-700 dark:text-stone-200">
+                          <input type="checkbox" checked={form.isDangerousGoods} onChange={(e) => set('isDangerousGoods', e.target.checked)} className="accent-amber-800 w-4 h-4" />
+                          Dangerous Goods / DG
+                        </label>
+                        <FieldHint meta={fieldMeta.isDangerousGoods} onPick={(v, s) => applyFieldValue('isDangerousGoods', v, s)} />
+                      </div>
+                    </div>
 
-        <div className="space-y-3">
-          <div>
-            <label className={labelClass}>נושא ההודעה</label>
-            <input
-              value={subject}
-              onChange={(e) => {
-                setSubject(e.target.value)
-                setSubjectEdited(true)
-              }}
-              dir="auto"
-              className={inputClass}
-            />
-          </div>
-          <div>
-            <label className={labelClass}>תוכן ההודעה</label>
-            <textarea
-              value={body}
-              onChange={(e) => {
-                setBody(e.target.value)
-                setBodyEdited(true)
-              }}
-              dir="rtl"
-              rows={14}
-              className={`${inputClass} resize-none text-sm leading-relaxed`}
-            />
-          </div>
-        </div>
-
-        <div className="mt-4 pt-4 border-t border-stone-100 dark:border-stone-800">
-          <div className="text-xs text-stone-500 dark:text-stone-400 mb-2">ייכתב מייל נפרד לכל אחת מהסוכנויות הבאות:</div>
-          {selectedForwarders.length === 0 ? (
-            <p className="text-xs text-stone-300 dark:text-stone-600">לא נבחרו סוכנויות</p>
-          ) : (
-            <div className="flex flex-wrap gap-1.5">
-              {selectedForwarders.map((f) => (
-                <span key={f.id} className="text-[11px] px-2.5 py-1 rounded-full bg-stone-50 dark:bg-stone-800 text-stone-600 dark:text-stone-300">
-                  {f.name} {f.email ? `· ${f.email}` : ''}
-                </span>
-              ))}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-4 border-t border-stone-100 dark:border-stone-800">
+                      <div>
+                        <label className={labelClass}>שם החברה / הספק</label>
+                        <input value={form.supplierName} onChange={(e) => set('supplierName', e.target.value)} dir="auto" className={inputClass} />
+                        <FieldHint meta={fieldMeta.supplierName} onPick={(v, s) => applyFieldValue('supplierName', v, s)} />
+                      </div>
+                      <div className="sm:col-span-2">
+                        <label className={labelClass}>כתובת מלאה לאיסוף</label>
+                        <input value={form.pickupAddress} onChange={(e) => set('pickupAddress', e.target.value)} dir="auto" className={inputClass} />
+                        <FieldHint meta={fieldMeta.pickupAddress} onPick={(v, s) => applyFieldValue('pickupAddress', v, s)} />
+                      </div>
+                      <div>
+                        <label className={labelClass}>איש קשר</label>
+                        <input value={form.contactPerson} onChange={(e) => set('contactPerson', e.target.value)} dir="auto" className={inputClass} />
+                        <FieldHint meta={fieldMeta.contactPerson} onPick={(v, s) => applyFieldValue('contactPerson', v, s)} />
+                      </div>
+                      <div>
+                        <label className={labelClass}>אימייל</label>
+                        <input value={form.contactEmail} onChange={(e) => set('contactEmail', e.target.value)} dir="ltr" className={inputClass} />
+                        <FieldHint meta={fieldMeta.contactEmail} onPick={(v, s) => applyFieldValue('contactEmail', v, s)} />
+                      </div>
+                      <div>
+                        <label className={labelClass}>טלפון</label>
+                        <input value={form.contactPhone} onChange={(e) => set('contactPhone', e.target.value)} dir="ltr" className={inputClass} />
+                        <FieldHint meta={fieldMeta.contactPhone} onPick={(v, s) => applyFieldValue('contactPhone', v, s)} />
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </Card>
             </div>
           )}
-        </div>
-      </Card>
 
-      {/* 7. שליחה */}
-      <div className="flex items-center gap-3">
-        <button
-          onClick={handleReady}
-          disabled={sending}
-          className="px-5 py-3 rounded-xl bg-amber-800 text-white text-sm font-medium hover:bg-amber-900 disabled:opacity-50"
-        >
-          {sending ? 'שולח...' : emailHealthy ? '✓ שלח בקשת הצעת מחיר' : '✓ הבקשה מוכנה לשליחה'}
-        </button>
-        <Link to="/work/shipments" className="px-5 py-3 rounded-xl border border-stone-200 dark:border-stone-700 text-sm font-medium text-stone-600 dark:text-stone-300">
-          ביטול
-        </Link>
+          {/* שלב 3+4 — מסמכים / סוכנויות / תצוגה מקדימה ושליחה */}
+          <div ref={dispatchRef} className="scroll-mt-6 grid grid-cols-1 xl:grid-cols-3 gap-5 items-start">
+            {/* מסמכים שיישלחו */}
+            <Card className="!p-4">
+              <h2 className="text-sm font-bold text-stone-800 dark:text-stone-100 mb-3">מסמכים כלולים ב-PDF</h2>
+              <div className="grid grid-cols-2 gap-2 mb-3">
+                {RFQ_DOC_CATEGORIES.map((cat) => {
+                  const catDocs = docs.filter((d) => d.category === cat.key)
+                  const included = catDocs.length > 0
+                  return (
+                    <div
+                      key={cat.key}
+                      className={`rounded-xl border p-2.5 ${included ? 'border-emerald-200 dark:border-emerald-900 bg-emerald-50/40 dark:bg-emerald-950/10' : 'border-dashed border-stone-200 dark:border-stone-700'}`}
+                    >
+                      <div className="flex items-start justify-between gap-1.5 mb-1">
+                        <span className="text-[11px] font-medium text-stone-700 dark:text-stone-200 leading-snug break-words">{cat.label}</span>
+                        <span className={`text-[13px] shrink-0 leading-snug ${included ? 'text-emerald-500' : 'text-stone-300 dark:text-stone-600'}`}>{included ? '✓' : '○'}</span>
+                      </div>
+                      {included ? (
+                        <ul className="space-y-1">
+                          {catDocs.map((d) => (
+                            <li key={d.id} className="flex items-center justify-between gap-1 text-[10.5px] text-stone-500 dark:text-stone-400">
+                              <span className="truncate">{d.file.name}</span>
+                              <button onClick={() => removeDoc(d.id)} className="text-stone-300 hover:text-red-500 shrink-0" aria-label="הסר">
+                                ✕
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => fileInputRefs.current[cat.key]?.click()}
+                          className="text-[10.5px] text-amber-800 dark:text-amber-400 hover:underline"
+                        >
+                          + הוסף קובץ
+                        </button>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+
+              <div className="pt-3 border-t border-stone-100 dark:border-stone-800">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-[11.5px] font-medium text-stone-700 dark:text-stone-200">מסמך ה-RFQ (PDF)</span>
+                  <span className="text-[10.5px] text-stone-400 dark:text-stone-500" dir="ltr">
+                    {rfqReference}
+                  </span>
+                </div>
+                {!showPdfPreview ? (
+                  <button
+                    type="button"
+                    onClick={() => setShowPdfPreview(true)}
+                    className="text-[11px] font-medium text-amber-800 dark:text-amber-400 hover:underline"
+                  >
+                    Preview PDF
+                  </button>
+                ) : (
+                  <>
+                    <div className="rounded-xl overflow-hidden border border-stone-200 dark:border-stone-700 h-[320px] mt-2">
+                      <PDFViewer width="100%" height="100%" showToolbar={false} style={{ border: 'none' }}>
+                        <RfqPdfDocument data={pdfData} documents={pdfDocuments} />
+                      </PDFViewer>
+                    </div>
+                    <PDFDownloadLink
+                      document={<RfqPdfDocument data={pdfData} documents={pdfDocuments} />}
+                      fileName={`RFQ-${form.name.trim() || 'shipment'}.pdf`}
+                      className="inline-block mt-2 text-[11px] font-medium text-stone-500 dark:text-stone-400 hover:underline"
+                    >
+                      {({ loading }) => (loading ? 'מכין PDF...' : '⬇ הורד PDF')}
+                    </PDFDownloadLink>
+                  </>
+                )}
+              </div>
+            </Card>
+
+            {/* סוכנויות */}
+            <Card className="!p-4">
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="text-sm font-bold text-stone-800 dark:text-stone-100">סוכנויות לקבלת הצעת מחיר</h2>
+                <button onClick={() => setAgencyModal({ open: true })} className="text-xs font-medium text-amber-800 dark:text-amber-400 hover:underline shrink-0">
+                  + הוסף
+                </button>
+              </div>
+
+              <div className="flex items-center gap-1.5 mb-3">
+                <button
+                  onClick={() => setSelectionMode('all-active')}
+                  className={`px-2.5 py-1 rounded-full text-[10.5px] font-medium border transition-colors ${
+                    selectionMode === 'all-active' ? 'bg-amber-800 text-white border-amber-800' : 'bg-white text-stone-500 border-stone-200 dark:bg-stone-900 dark:text-stone-400 dark:border-stone-700'
+                  }`}
+                >
+                  כל הפעילות ({activeForwarders.length})
+                </button>
+                <button
+                  onClick={() => setSelectionMode('manual')}
+                  className={`px-2.5 py-1 rounded-full text-[10.5px] font-medium border transition-colors ${
+                    selectionMode === 'manual' ? 'bg-amber-800 text-white border-amber-800' : 'bg-white text-stone-500 border-stone-200 dark:bg-stone-900 dark:text-stone-400 dark:border-stone-700'
+                  }`}
+                >
+                  בחירה ידנית
+                </button>
+              </div>
+
+              {forwarders.length === 0 ? (
+                <p className="text-xs text-stone-400 dark:text-stone-500">עדיין אין סוכנויות שמורות — הוסף/י את הראשונה למעלה.</p>
+              ) : (
+                <ul className="divide-y divide-stone-50 dark:divide-stone-800 max-h-[360px] overflow-y-auto">
+                  {forwarders.map((f) => {
+                    const isActive = f.active !== false
+                    const checked = selectionMode === 'all-active' ? isActive : manualSelectedIds.includes(f.id)
+                    return (
+                      <li key={f.id} className="py-2 flex items-center gap-2">
+                        {selectionMode === 'manual' ? (
+                          <input type="checkbox" checked={checked} onChange={() => toggleManual(f.id)} className="accent-amber-800 w-4 h-4 shrink-0" />
+                        ) : (
+                          <span className={`w-4 h-4 rounded shrink-0 flex items-center justify-center text-[9px] text-white ${checked ? 'bg-amber-800' : 'bg-stone-100 dark:bg-stone-800'}`}>
+                            {checked ? '✓' : ''}
+                          </span>
+                        )}
+                        <div className="min-w-0 flex-1">
+                          <div className="text-[12.5px] text-stone-800 dark:text-stone-100 truncate">{f.name}</div>
+                          <div className="text-[10.5px] text-stone-400 dark:text-stone-500 truncate" dir="ltr" style={{ direction: 'ltr', textAlign: 'right' }}>
+                            {f.email || '—'}
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => handleToggleActive(f)}
+                          className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full shrink-0 ${
+                            isActive ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400' : 'bg-stone-100 text-stone-500 dark:bg-stone-800 dark:text-stone-400'
+                          }`}
+                        >
+                          {isActive ? 'פעיל' : 'לא פעיל'}
+                        </button>
+                        <button
+                          onClick={() => setAgencyModal({ open: true, editingId: f.id })}
+                          className="text-[10.5px] font-medium text-amber-800 dark:text-amber-400 hover:underline shrink-0"
+                        >
+                          ערוך
+                        </button>
+                      </li>
+                    )
+                  })}
+                </ul>
+              )}
+            </Card>
+
+            {/* תצוגה מקדימה של המייל */}
+            <div ref={sendPanelRef} className="scroll-mt-6 xl:col-span-1">
+              <Card className="!p-4">
+                <h2 className="text-sm font-bold text-stone-800 dark:text-stone-100 mb-1">תצוגה מקדימה של המייל</h2>
+                <p className="text-[10.5px] text-stone-400 dark:text-stone-500 mb-3">כל סוכנות תקבל מייל נפרד עם אותו תוכן — לא CC משותף.</p>
+
+                <div className="rounded-xl border border-stone-200 dark:border-stone-700 overflow-hidden">
+                  <div className="bg-stone-50 dark:bg-stone-800/60 px-3 py-2 border-b border-stone-200 dark:border-stone-700 space-y-1">
+                    <div className="text-[10.5px] text-stone-400 dark:text-stone-500">
+                      אל: <span className="text-stone-600 dark:text-stone-300">{selectedForwarders.length > 0 ? `${selectedForwarders.length} סוכנויות, כל אחת בנפרד` : 'לא נבחרו סוכנויות'}</span>
+                    </div>
+                    <input
+                      value={subject}
+                      onChange={(e) => {
+                        setSubject(e.target.value)
+                        setSubjectEdited(true)
+                      }}
+                      dir="auto"
+                      className="w-full bg-transparent text-[12.5px] font-semibold text-stone-800 dark:text-stone-100 outline-none"
+                    />
+                  </div>
+                  <textarea
+                    value={body}
+                    onChange={(e) => {
+                      setBody(e.target.value)
+                      setBodyEdited(true)
+                    }}
+                    dir="rtl"
+                    rows={7}
+                    className="w-full p-3 text-[12.5px] leading-relaxed text-stone-700 dark:text-stone-200 bg-white dark:bg-stone-900 outline-none resize-none"
+                  />
+                  <div className="px-3 py-2 border-t border-stone-100 dark:border-stone-800 flex flex-wrap gap-1.5">
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-stone-100 dark:bg-stone-800 text-stone-500 dark:text-stone-400">📄 RFQ-{form.name.trim() || 'shipment'}.pdf</span>
+                    {docs.map((d) => (
+                      <span key={d.id} className="text-[10px] px-2 py-0.5 rounded-full bg-stone-100 dark:bg-stone-800 text-stone-500 dark:text-stone-400 truncate max-w-[140px]">
+                        📎 {d.file.name}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="mt-3 pt-3 border-t border-stone-100 dark:border-stone-800">
+                  {selectedForwarders.length === 0 ? (
+                    <p className="text-xs text-stone-300 dark:text-stone-600">לא נבחרו סוכנויות</p>
+                  ) : (
+                    <div className="flex flex-wrap gap-1.5">
+                      {selectedForwarders.map((f) => (
+                        <span key={f.id} className="text-[10.5px] px-2 py-1 rounded-full bg-stone-50 dark:bg-stone-800 text-stone-600 dark:text-stone-300">
+                          {f.name}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </Card>
+            </div>
+          </div>
+        </div>
       </div>
-      <p className="text-xs text-stone-400 dark:text-stone-500">
-        {emailHealthy
-          ? 'לחיצה תבקש אישור ותשלח מייל נפרד לכל סוכנות שנבחרה, עם המסמכים המצורפים.'
-          : 'השליחה בפועל תתאפשר לאחר חיבור תיבת המייל של המערכת. כרגע הבקשה תישמר ותופיע כמוכנה במעקב המשלוחים.'}
-      </p>
 
       <QuickAddPopover
         open={agencyModal.open}

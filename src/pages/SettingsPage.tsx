@@ -65,7 +65,13 @@ export default function SettingsPage() {
       if (summary.checked === 0) {
         notify('אין מיילים חדשים.', 'info')
       } else {
-        notify(`נבדקו ${summary.checked} מיילים חדשים: ${summary.autoFiled} נוספו אוטומטית, ${summary.sentToInbox} נשלחו לתיבת הכניסה למיון.`, 'success')
+        const pendingNote = summary.calendarPending > 0 ? ` · ${summary.calendarPending} ממתינים לאישור ביומן` : ''
+        notify(
+          `נבדקו ${summary.checked} מיילים חדשים: ${summary.autoFiled} נוספו אוטומטית, ${summary.sentToInbox} נשלחו לתיבת הכניסה למיון${pendingNote}.`,
+          'success',
+        )
+        // הודעה נפרדת לכל אירוע יומן שנוצר/עודכן בביטחון גבוה — הפורמט הקצר שהוגדר לתכונה הזו.
+        summary.calendarMessages.forEach((m) => notify(m, 'info'))
       }
     } catch (err: any) {
       notify(err instanceof EmailCheckError ? err.message : 'הבדיקה נכשלה. אפשר לנסות שוב.', 'error')

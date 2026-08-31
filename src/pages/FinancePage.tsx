@@ -1,7 +1,13 @@
+import { useMemo } from 'react'
 import { WalletIcon, BulbIcon, CalendarIcon, TargetIcon } from '../components/hub/hubIcons'
 import DomainHubLayout from '../components/hub/DomainHubLayout'
 import HubSectionHeader from '../components/hub/HubSectionHeader'
 import QuickCaptureBar from '../components/QuickCaptureBar'
+import { useStore } from '../data/StoreContext'
+import { useDetailModal } from '../data/DetailModalContext'
+import UnifiedCalendar from '../components/calendar/UnifiedCalendar'
+import { itemsToCalendarEvents } from '../components/calendar/itemAdapter'
+import { ItemStatus } from '../data/types'
 import DonutChart from '../components/finance/DonutChart'
 import AreaLineChart from '../components/finance/AreaLineChart'
 import BarChart from '../components/finance/BarChart'
@@ -62,7 +68,13 @@ interface Insight {
   wide?: boolean
 }
 
+const isActive = (status: ItemStatus) => status !== 'done' && status !== 'cancelled'
+
 export default function FinancePage() {
+  const { items, toggleDone } = useStore()
+  const { openEdit, openCreate } = useDetailModal()
+  const financeItems = useMemo(() => items.filter((it) => it.domain === 'finance' && it.date && isActive(it.status)), [items])
+
   const s = mockMonthSummary
   const barData = mockMonthlyTrend.map((m) => ({ label: m.month, value: m.expenses }))
   const availableTrendValues = mockAvailableMoneyTrend.map((p) => p.value)
@@ -332,6 +344,14 @@ export default function FinancePage() {
           </div>
         </Panel>
       </div>
+
+      <UnifiedCalendar
+        title="יומן כספים"
+        events={itemsToCalendarEvents(financeItems, openEdit)}
+        onAddEvent={(date) => openCreate('finance', { date })}
+        onToggleTask={toggleDone}
+        compact
+      />
     </DomainHubLayout>
   )
 }

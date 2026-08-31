@@ -1,7 +1,8 @@
 import { repository } from '../data/db/repository'
 import { askAi, AiClientError } from '../ai/aiClient'
 import { mapAiDraft } from '../ai/mapDraft'
-import { MEDIUM_CONFIDENCE } from '../components/QuickCaptureBar'
+import { HIGH_CONFIDENCE, MEDIUM_CONFIDENCE } from '../components/QuickCaptureBar'
+import { findLikelyDuplicate, formatShortDate } from './calendarDedup'
 import { Item, Project, InboxSource, EmailAccountId } from '../data/types'
 import { Brand, BrandProduct, BrandCampaign } from '../data/brandTypes'
 
@@ -11,6 +12,12 @@ export interface EmailCheckSummary {
   checked: number
   autoFiled: number
   sentToInbox: number
+  // תת-פירוט ליומן החכם — ראו checkEmailAccount לוגיקת הביטחון. calendarMessages מנוסחים מוכנים
+  // להצגה כ-toast בודד לכל אחד ("נוסף ליומן: ... · 12/9" / "מועד עודכן: ...").
+  calendarCreated: number
+  calendarPending: number
+  calendarUpdated: number
+  calendarMessages: string[]
 }
 
 export interface EmailIngestStore {
@@ -20,6 +27,7 @@ export interface EmailIngestStore {
   brandProducts: BrandProduct[]
   brandCampaigns: BrandCampaign[]
   addItem: (data: Omit<Item, 'id' | 'createdAt' | 'updatedAt'>) => Promise<Item>
+  updateItem: (id: string, patch: Partial<Item>) => Promise<void>
   addInboxEntry: (
     text: string,
     source: InboxSource,
@@ -88,14 +96,28 @@ export async function checkAccountsHealth(): Promise<Record<EmailAccountId, bool
   }
 }
 
-// בודקת מיילים חדשים בתיבת INBOX של חשבון אחד, מסווגת כל מייל עם אותו pipeline AI שכבר
-// משמש את QuickCaptureBar (ביטחון גבוה/בינוני + תחום ברור → פריט אוטומטי; אחרת → תיבת כניסה למיון).
+// בודקת מיילים חדשים בתיבת INBOX של חשבון אחד, מסווגת כל מייל עם אותו pipeline AI שכבר משמש
+// את QuickCaptureBar. כאן, בניגוד ל-QuickCaptureBar (שם משתמש מקליד עכשיו ורואה מיד את התוצאה),
+// אף אחד לא נוכח לתקן טעות באותו רגע — ולכן שלוש רמות ביטחון נפרדות במקום סף אחד:
+//   ביטחון גבוה  (>= HIGH_CONFIDENCE)   → פריט נוצר/מתעדכן ישירות, מוצג toast "נוסף/עודכן ליומן".
+//   ביטחון בינוני (MEDIUM..HIGH)        → פריט נוצר, אך reviewStatus:'pending' — מסומן ביומן
+//                                          ל"אישור", נעלם אוטומטית ברגע שנשמר/נערך.
+//   ביטחון נמוך  (< MEDIUM_CONFIDENCE)  → כמו קודם: נשלח לתיבת הכניסה למיון ידני (שם אדם מחליט).
+// כפילות/עדכון (סעיף "אל תשכפל") נבדקים רק לטיוטות calendar-worthy (draft.needsCalendar + תאריך) —
+// ראו calendarDedup.ts. אם נמצאת התאמה סבירה, מעדכנים את הפריט הקיים במקום ליצור חדש.
 export async function checkEmailAccount(account: EmailAccountId, store: EmailIngestStore): Promise<EmailCheckSummary> {
   const syncState = await repository.getEmailSyncState(account)
   const { syncState: newSyncState, messages } = await fetchNewFromServer(account, syncState)
 
   let autoFiled = 0
   let sentToInbox = 0
+  let calendarCreated = 0
+  let calendarPending = 0
+  let calendarUpdated = 0
+  const calendarMessages: string[] = []
+  // פריטים שנוצרו במהלך הריצה הנוכחית — נבדקים גם הם לכפילות, כדי שלא ייווצרו שני פריטים לאותו
+  // אירוע אם שני מיילים בבת-אחת (למשל תזכורת + עדכון) מדווחים עליו.
+  const createdThisRun: Item[] = []
 
   for (const msg of messages) {
     const cleanBody = stripQuotedAndSignature(msg.text) || msg.text
@@ -109,24 +131,55 @@ export async function checkEmailAccount(account: EmailAccountId, store: EmailIng
       if (result.intent === 'create_draft' && result.draft) {
         const mapped = mapAiDraft(result.draft)
         if (mapped.domain && result.confidence >= MEDIUM_CONFIDENCE) {
-          await store.addItem({
-            title: mapped.title,
-            kind: mapped.kind,
-            domain: mapped.domain,
-            destination: mapped.destination,
-            listType: mapped.listType,
-            date: mapped.date,
-            startTime: mapped.startTime,
-            endTime: mapped.endTime,
-            priority: mapped.priority,
-            status: 'open',
-            projectId: mapped.projectId,
-            brandId: mapped.brandId,
-            personName: mapped.personName,
-            notes: mapped.notes,
-            amount: mapped.amount,
-            currency: mapped.currency,
-          })
+          const calendarWorthy = !!result.draft.needsCalendar && !!mapped.date
+          const dup = calendarWorthy ? findLikelyDuplicate([...store.items, ...createdThisRun], mapped) : null
+
+          if (dup) {
+            // "עדכון" ולא יצירה — למשל מרצה ששינה מועד הגשה, פגישה שהוזזה וכו'.
+            const dateChanged = dup.date !== mapped.date
+            await store.updateItem(dup.id, {
+              date: mapped.date,
+              startTime: mapped.startTime,
+              endTime: mapped.endTime,
+              eventSource: dup.eventSource ?? 'gmail',
+            })
+            if (dateChanged) {
+              calendarMessages.push(`מועד עודכן: ${dup.title} · ${formatShortDate(dup.date)} ← ${formatShortDate(mapped.date)}`)
+              calendarUpdated++
+            }
+          } else {
+            const isHighConfidence = result.confidence >= HIGH_CONFIDENCE
+            const item = await store.addItem({
+              title: mapped.title,
+              kind: mapped.kind,
+              domain: mapped.domain,
+              destination: mapped.destination,
+              listType: mapped.listType,
+              date: mapped.date,
+              startTime: mapped.startTime,
+              endTime: mapped.endTime,
+              priority: mapped.priority,
+              status: 'open',
+              projectId: mapped.projectId,
+              brandId: mapped.brandId,
+              personName: mapped.personName,
+              notes: mapped.notes,
+              amount: mapped.amount,
+              currency: mapped.currency,
+              eventSource: 'gmail',
+              reviewStatus: calendarWorthy && !isHighConfidence ? 'pending' : undefined,
+            })
+            createdThisRun.push(item)
+            if (calendarWorthy) {
+              if (isHighConfidence) {
+                calendarMessages.push(`נוסף ליומן: ${mapped.title}${mapped.date ? ` · ${formatShortDate(mapped.date)}` : ''}`)
+                calendarCreated++
+              } else {
+                calendarPending++
+              }
+            }
+          }
+
           autoFiled++
           autoFiledThisMessage = true
         }
@@ -144,5 +197,5 @@ export async function checkEmailAccount(account: EmailAccountId, store: EmailIng
 
   await repository.setEmailSyncState(account, newSyncState)
 
-  return { checked: messages.length, autoFiled, sentToInbox }
+  return { checked: messages.length, autoFiled, sentToInbox, calendarCreated, calendarPending, calendarUpdated, calendarMessages }
 }

@@ -13,9 +13,11 @@ export default function Layout() {
   const [collapsed, setCollapsed] = useState(false)
   const pathname = useLocation().pathname
   const isHome = pathname === '/'
-  // דף הבית ועמוד הלימודים תוכננו כ-Hubs רחבים (שורת פאנלים משולשת, יומן שבועי עם רשת שעות) —
-  // לא מסתדרים בעמודה צרה כמו שאר העמודים. שינוי רוחב ממוקד לפי נתיב בלבד.
-  const isWide = pathname === '/' || pathname.startsWith('/studies') || pathname.endsWith('/rfq')
+  // דפים שתוכננו כ-Hubs רחבים (שורות פאנלים, טבלאות רחבות, יומן שבועי) — לא מסתדרים בעמודה
+  // צרה כמו שאר העמודים. שינוי רוחב ממוקד לפי נתיב בלבד.
+  // /work/shipments/new הוא עכשיו סביבת עבודה רחבה (עמודה ראשית + רצועת סיכום צרה) ולא טופס ארוך — נכנס לרשימה.
+  // /calendar עבר ליומן המאוחד (רשת חודשית + רצועת סוכם יום) — גם הוא זקוק לרוחב.
+  const isWide = pathname === '/' || pathname.startsWith('/studies') || pathname.startsWith('/work/shipments') || pathname === '/calendar'
   const { loading } = useStore()
 
   return (

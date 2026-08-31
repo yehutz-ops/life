@@ -8,7 +8,8 @@ import HubSectionHeader from '../components/hub/HubSectionHeader'
 import HubCategoryGrid from '../components/hub/HubCategoryGrid'
 import HubCategoryCard from '../components/hub/HubCategoryCard'
 import TimelineList from '../components/hub/TimelineList'
-import MiniDomainCalendar from '../components/hub/MiniDomainCalendar'
+import UnifiedCalendar from '../components/calendar/UnifiedCalendar'
+import { itemsToCalendarEvents } from '../components/calendar/itemAdapter'
 import QuickCaptureBar from '../components/QuickCaptureBar'
 import { todayISO } from '../utils/date'
 import { ItemStatus } from '../data/types'
@@ -25,7 +26,7 @@ function isMoreItem(text: string): boolean {
 
 export default function WorkPage() {
   const { items, toggleDone, influencers, campaigns, shipments, ideaBankItems } = useStore()
-  const { openEdit } = useDetailModal()
+  const { openEdit, openCreate } = useDetailModal()
   const today = todayISO()
 
   const workItems = useMemo(() => items.filter((it) => it.domain === 'work'), [items])
@@ -92,7 +93,13 @@ export default function WorkPage() {
         })}
       </HubCategoryGrid>
 
-      <MiniDomainCalendar title="יומן עבודה" items={calendarItems} />
+      <UnifiedCalendar
+        title="יומן עבודה"
+        events={itemsToCalendarEvents(calendarItems, openEdit)}
+        onAddEvent={(date) => openCreate('work', { date })}
+        onToggleTask={toggleDone}
+        compact
+      />
     </DomainHubLayout>
   )
 }

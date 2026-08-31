@@ -15,6 +15,9 @@ import CampaignDetailPage from './pages/CampaignDetailPage'
 import ShipmentsPage from './pages/ShipmentsPage'
 import ShipmentDetailPage from './pages/ShipmentDetailPage'
 import RfqDashboardPage from './pages/RfqDashboardPage'
+import ReceivedQuotesPage from './pages/ReceivedQuotesPage'
+import AgenciesPage from './pages/AgenciesPage'
+import ShipmentFinancePage from './pages/ShipmentFinancePage'
 // טעינה עצלה — הדף היחיד שמייבא @react-pdf/renderer, ספרייה כבדה; לא צריך לנפח את ה-bundle הראשי בשביל דף אחד.
 const NewShipmentRequestPage = lazy(() => import('./pages/NewShipmentRequestPage'))
 import HouseholdPage from './pages/HouseholdPage'
@@ -78,6 +81,9 @@ export default function App() {
                             </Suspense>
                           }
                         />
+                        <Route path="work/shipments/quotes" element={<ReceivedQuotesPage />} />
+                        <Route path="work/shipments/agencies" element={<AgenciesPage />} />
+                        <Route path="work/shipments/finance" element={<ShipmentFinancePage />} />
                         <Route path="work/shipments/:shipmentId" element={<ShipmentDetailPage />} />
                         <Route path="work/shipments/:shipmentId/rfq" element={<RfqDashboardPage />} />
                         <Route path="work/ideas" element={<IdeaBankPage />} />

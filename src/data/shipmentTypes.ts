@@ -1,4 +1,5 @@
 import { QuoteExtraction, QuoteFieldMeta, QuoteSourceEmail, MatchMethod } from './rfqTypes'
+import { PaymentTermsBasis } from './shipmentFinanceTypes'
 
 export type ShipmentStatus =
   | 'preparing'
@@ -43,6 +44,15 @@ export interface Shipment {
   departureDate?: string
   eta?: string
   selectedForwarderId?: string
+  // ההצעה שנבחרה בפועל — הבסיס לשכבת הכספים (מה סוכם לשלם, ולפי אילו תנאים).
+  selectedQuoteId?: string
+  // מע"מ: אומדן ובפועל נשמרים בנפרד במכוון — אומדן לעולם לא מוצג כסכום רשמי.
+  vatEstimate?: number
+  vatActual?: number
+  vatPaidAt?: string
+  // דריסת תנאי התשלום של הסוכנות עבור המשלוח הזה בלבד.
+  paymentTermsDays?: number
+  paymentTermsBasis?: PaymentTermsBasis
   trackingNumber?: string
   status: ShipmentStatus
   notes?: string
@@ -129,6 +139,14 @@ export interface Forwarder {
   email?: string
   phone?: string
   active?: boolean // undefined/true = פעיל, false בלבד = לא פעיל (כך רשומות ישנות ממשיכות להיחשב פעילות)
+  // יכולות — משמשות לסינון "למי בכלל שווה לשלוח את הבקשה הזו".
+  handlesAir?: boolean
+  handlesSea?: boolean
+  handlesDG?: boolean
+  specialties?: string
+  // תנאי תשלום ברירת מחדל; ניתנים לדריסה ברמת המשלוח.
+  paymentTermsDays?: number
+  paymentTermsBasis?: PaymentTermsBasis
   notes?: string
   createdAt: string
   updatedAt: string

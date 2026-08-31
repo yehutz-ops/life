@@ -5,7 +5,8 @@ const DB_NAME = 'life-control-center'
 // (idempotent בזכות בדיקות ה-contains) בלי להשפיע על נתונים קיימים.
 // גרסה 7 מוסיפה את מחסני עמוד הלימודים (קורסים/ציונים/דרישות תואר/חומרי לימוד).
 // גרסה 8 מוסיפה את מחסני ה-RFQ (שליחות לסוכנויות + מיילים שלא שויכו).
-const DB_VERSION = 8
+// גרסה 9 מוסיפה את שכבת הכספים של המשלוחים (חשבוניות ותשלומים).
+const DB_VERSION = 9
 
 export const STORES = {
   items: 'items',
@@ -43,6 +44,8 @@ export const STORES = {
   studyMaterials: 'studyMaterials',
   rfqDispatches: 'rfqDispatches',
   rfqUnmatchedEmails: 'rfqUnmatchedEmails',
+  shipmentInvoices: 'shipmentInvoices',
+  shipmentPayments: 'shipmentPayments',
 } as const
 
 let dbPromise: Promise<IDBDatabase> | null = null
@@ -103,6 +106,9 @@ export function openDB(): Promise<IDBDatabase> {
       // RFQ — למי נשלחה כל בקשה, ומיילים נכנסים שלא ניתן היה לשייך בוודאות.
       if (!db.objectStoreNames.contains(STORES.rfqDispatches)) db.createObjectStore(STORES.rfqDispatches, { keyPath: 'id' })
       if (!db.objectStoreNames.contains(STORES.rfqUnmatchedEmails)) db.createObjectStore(STORES.rfqUnmatchedEmails, { keyPath: 'id' })
+      // כספי משלוחים — חשבוניות ותשלומים.
+      if (!db.objectStoreNames.contains(STORES.shipmentInvoices)) db.createObjectStore(STORES.shipmentInvoices, { keyPath: 'id' })
+      if (!db.objectStoreNames.contains(STORES.shipmentPayments)) db.createObjectStore(STORES.shipmentPayments, { keyPath: 'id' })
     }
 
     req.onsuccess = () => {

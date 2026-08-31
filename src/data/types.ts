@@ -61,9 +61,27 @@ export interface Item {
   // שדות עמוד לימודים — Additive, אופציונליים, רלוונטיים רק כש-domain === 'studies'.
   courseId?: string // קישור לקורס (src/data/studyTypes.ts), לא משפיע על פריטים בתחומים אחרים
   studyKind?: 'assignment' | 'reading' | 'exam' | 'submission'
+  // מקור/סטטוס-בדיקה ליומן החכם (checkEmailAccount.ts) — Additive, אופציונליים. eventSource מציין
+  // מאיפה הפריט הגיע (למראה "מקור" בפרטי אירוע); reviewStatus:'pending' מסמן פריט שנוצר אוטומטית
+  // בביטחון בינוני וממתין לאישור/עריכה של המשתמש (נעלם ברגע ששומרים את הפריט מחדש).
+  // externalRef הוא סימן זהות יציב מהמקור החיצוני (למשל UID של מייל), לשימוש עתידי בזיהוי כפילויות מדויק יותר.
+  eventSource?: 'manual' | 'gmail' | 'lemida' | 'inbar' | 'shipment' | 'finance'
+  reviewStatus?: 'pending'
+  externalRef?: string
   createdAt: string
   updatedAt: string
   completedAt?: string
+}
+
+export type EventSource = NonNullable<Item['eventSource']>
+
+export const EVENT_SOURCE_LABEL: Record<EventSource, string> = {
+  manual: 'הוזן ידנית',
+  gmail: 'Gmail',
+  lemida: 'לימדה',
+  inbar: 'InBar',
+  shipment: 'מערכת משלוחים',
+  finance: 'מערכת כספים',
 }
 
 export interface Project {
