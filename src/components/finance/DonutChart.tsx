@@ -6,7 +6,23 @@ export interface DonutSlice {
   color: string
 }
 
-export default function DonutChart({ data, size = 180, strokeWidth = 26 }: { data: DonutSlice[]; size?: number; strokeWidth?: number }) {
+// valueSuffix/centerLabel/formatValue אופציונליים — ברירת המחדל שומרת בדיוק על ההתנהגות
+// הקיימת (סכומי כסף בשקלים), כדי שהשימושים הקיימים לא ישתנו.
+export default function DonutChart({
+  data,
+  size = 180,
+  strokeWidth = 26,
+  valueSuffix = '₪',
+  centerLabel = 'סך הוצאות',
+  formatValue = (v: number) => v.toLocaleString('he-IL'),
+}: {
+  data: DonutSlice[]
+  size?: number
+  strokeWidth?: number
+  valueSuffix?: string
+  centerLabel?: string
+  formatValue?: (v: number) => string
+}) {
   const [hovered, setHovered] = useState<number | null>(null)
   const total = data.reduce((sum, d) => sum + d.amount, 0)
   const r = (size - strokeWidth) / 2
@@ -44,10 +60,10 @@ export default function DonutChart({ data, size = 180, strokeWidth = 26 }: { dat
           })}
         </g>
         <text x="50%" y="47%" textAnchor="middle" className="fill-stone-800 dark:fill-stone-100" style={{ fontSize: 20, fontWeight: 600 }}>
-          {active ? `${Math.round((active.amount / total) * 100)}%` : `${total.toLocaleString('he-IL')}₪`}
+          {active ? `${Math.round((active.amount / total) * 100)}%` : `${formatValue(total)}${valueSuffix}`}
         </text>
         <text x="50%" y="62%" textAnchor="middle" className="fill-stone-400 dark:fill-stone-500" style={{ fontSize: 11 }}>
-          {active ? active.name : 'סך הוצאות'}
+          {active ? active.name : centerLabel}
         </text>
       </svg>
 
@@ -61,7 +77,10 @@ export default function DonutChart({ data, size = 180, strokeWidth = 26 }: { dat
           >
             <span className="w-2 h-2 rounded-full shrink-0" style={{ background: d.color }} />
             <span className="text-stone-600 dark:text-stone-300 truncate flex-1">{d.name}</span>
-            <span className="text-stone-400 dark:text-stone-500 shrink-0">{d.amount.toLocaleString('he-IL')}₪</span>
+            <span className="text-stone-400 dark:text-stone-500 shrink-0">
+              {formatValue(d.amount)}
+              {valueSuffix}
+            </span>
           </li>
         ))}
       </ul>

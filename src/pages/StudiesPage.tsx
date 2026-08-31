@@ -9,6 +9,8 @@ import { useDetailModal } from '../data/DetailModalContext'
 import { useConfirm } from '../data/ConfirmContext'
 import { daysUntilLabel, todayISO } from '../utils/date'
 import { Item } from '../data/types'
+import UnifiedCalendar from '../components/calendar/UnifiedCalendar'
+import { itemsToCalendarEvents } from '../components/calendar/itemAdapter'
 import {
   openTaskCountForCourse,
   nextDeadlineForCourse,
@@ -133,18 +135,6 @@ const COURSE_ACCENTS = [
   { bg: 'bg-cyan-50 dark:bg-cyan-950/30', fg: 'text-cyan-500 dark:text-cyan-300', bar: 'bg-cyan-400', dot: 'bg-cyan-400', icon: TargetIcon },
 ]
 
-const WEEKDAYS = ['א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ש']
-const MONTHS = ['ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני', 'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר']
-
-function toISO(d: Date) {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-}
-
-function startOfWeek(d: Date) {
-  const copy = new Date(d.getFullYear(), d.getMonth(), d.getDate())
-  copy.setDate(copy.getDate() - copy.getDay())
-  return copy
-}
 
 // משטח בסיסי לעמוד — רדיוס 16px וגבול עדין, מעט הדוק יותר מ-Card הכללי (rounded-3xl).
 function Panel({ children, className = '' }: { children: ReactNode; className?: string }) {
@@ -214,8 +204,9 @@ export default function StudiesPage() {
     addDegreeRequirementCategory,
     addStudyMaterial,
     deleteStudyMaterial,
+    toggleDone,
   } = useStore()
-  const { openEdit } = useDetailModal()
+  const { openEdit, openCreate } = useDetailModal()
   const confirm = useConfirm()
 
   const [courseModal, setCourseModal] = useState<{ id?: string } | null>(null)
@@ -223,9 +214,12 @@ export default function StudiesPage() {
   const [degreeModalOpen, setDegreeModalOpen] = useState(false)
   const [materialModalOpen, setMaterialModalOpen] = useState(false)
   const [deadlineModalOpen, setDeadlineModalOpen] = useState(false)
-  const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date()))
 
   const studyItems = useMemo(() => items.filter((it) => it.domain === 'studies'), [items])
+  const studyCalendarItems = useMemo(
+    () => studyItems.filter((it) => it.date && it.status !== 'done' && it.status !== 'cancelled'),
+    [studyItems],
+  )
   const attention = useMemo(() => computeStudyAttention(items, grades), [items, grades])
   const overallAvg = useMemo(() => overallAverageGrade(grades), [grades])
   const trend = useMemo(() => gradeTrend(grades), [grades])
@@ -243,17 +237,6 @@ export default function StudiesPage() {
   }
   const editingCourse = courseModal?.id ? courses.find((c) => c.id === courseModal.id) : undefined
 
-  const weekDays = useMemo(() => Array.from({ length: 7 }, (_, i) => new Date(weekStart.getFullYear(), weekStart.getMonth(), weekStart.getDate() + i)), [weekStart])
-  const monthLabel = `${MONTHS[weekDays[3].getMonth()]} ${weekDays[3].getFullYear()}`
-  const itemsByDate = useMemo(() => {
-    const map: Record<string, Item[]> = {}
-    studyItems.forEach((it) => {
-      if (!it.date) return
-      map[it.date] = map[it.date] || []
-      map[it.date].push(it)
-    })
-    return map
-  }, [studyItems])
 
   async function handleSaveCourse(values: Record<string, string>) {
     const name = values.name?.trim()
@@ -566,80 +549,8 @@ export default function StudiesPage() {
         </Panel>
       </section>
 
-      {/* יומן לימודים + חומרי לימוד */}
-      <section className="grid grid-cols-1 lg:grid-cols-[1.35fr_1fr] gap-5 items-start">
-        {/* יומן לימודים */}
-        <Panel className="p-5">
-          <div className="flex items-center justify-between gap-3 mb-4">
-            <div className="flex items-center gap-2">
-              <CalendarIcon className="w-4 h-4 text-stone-300 dark:text-stone-600" />
-              <h2 className="text-[15px] font-bold text-stone-800 dark:text-stone-100">יומן לימודים</h2>
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setWeekStart(startOfWeek(new Date()))}
-                className="px-2.5 h-7 rounded-lg bg-stone-100 dark:bg-stone-800 text-[11px] font-semibold text-stone-600 dark:text-stone-300 hover:bg-stone-200 dark:hover:bg-stone-700 transition-colors"
-              >
-                היום
-              </button>
-              <span className="text-xs font-medium text-stone-500 dark:text-stone-400 whitespace-nowrap">{monthLabel}</span>
-              <div className="flex items-center gap-1">
-                <button
-                  onClick={() => setWeekStart((w) => new Date(w.getFullYear(), w.getMonth(), w.getDate() - 7))}
-                  aria-label="שבוע קודם"
-                  className="w-7 h-7 rounded-lg border border-stone-200 dark:border-stone-700 text-stone-400 hover:bg-stone-50 dark:hover:bg-stone-800 text-xs"
-                >
-                  →
-                </button>
-                <button
-                  onClick={() => setWeekStart((w) => new Date(w.getFullYear(), w.getMonth(), w.getDate() + 7))}
-                  aria-label="שבוע הבא"
-                  className="w-7 h-7 rounded-lg border border-stone-200 dark:border-stone-700 text-stone-400 hover:bg-stone-50 dark:hover:bg-stone-800 text-xs"
-                >
-                  ←
-                </button>
-              </div>
-            </div>
-          </div>
-          <div className="grid grid-cols-7 gap-2">
-            {weekDays.map((d, i) => {
-              const iso = toISO(d)
-              const isToday = iso === todayISO()
-              const dayItems = itemsByDate[iso] || []
-              return (
-                <div key={iso} className="min-w-0">
-                  <div className="text-center mb-2">
-                    <div className="text-[10px] text-stone-400 dark:text-stone-500">{WEEKDAYS[i]}</div>
-                    <div
-                      className={`mx-auto mt-1 w-7 h-7 flex items-center justify-center rounded-full text-[13px] ${isToday ? 'text-white font-bold' : 'text-stone-700 dark:text-stone-200 font-semibold'}`}
-                      style={isToday ? { background: ACCENT } : undefined}
-                    >
-                      {d.getDate()}
-                    </div>
-                  </div>
-                  <div className="space-y-1 min-h-[96px]">
-                    {dayItems.slice(0, 3).map((it) => {
-                      const accent = courseAccent(it.courseId)
-                      return (
-                        <button
-                          key={it.id}
-                          onClick={() => openEdit(it.id)}
-                          className={`w-full text-right rounded-lg px-1.5 py-1.5 ${accent.bg} hover:opacity-75 transition-opacity`}
-                        >
-                          <span className={`block text-[10px] font-semibold leading-tight truncate ${accent.fg}`}>{it.title}</span>
-                          <span className="block text-[9px] leading-tight text-stone-400 dark:text-stone-500 truncate mt-0.5">{courseName(it.courseId) ?? '—'}</span>
-                        </button>
-                      )
-                    })}
-                    {dayItems.length > 3 && <div className="text-[9px] text-stone-400 dark:text-stone-500 text-center">+{dayItems.length - 3}</div>}
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        </Panel>
-
-        {/* חומרי לימוד */}
+      {/* חומרי לימוד */}
+      <section>
         <div>
           <SectionHead title="חומרי לימוד" action={<AddLink onClick={() => setMaterialModalOpen(true)} label="+ חומר לימוד" />} />
           <div className="grid grid-cols-4 gap-3">
@@ -684,6 +595,18 @@ export default function StudiesPage() {
           )}
         </div>
       </section>
+
+      <UnifiedCalendar
+        title="יומן לימודים"
+        events={itemsToCalendarEvents(studyCalendarItems, openEdit).map((ev) => {
+          const it = studyCalendarItems.find((i) => i.id === ev.id)
+          const course = it ? courseName(it.courseId) : undefined
+          return course ? { ...ev, kindLabel: `${ev.kindLabel} · ${course}` } : ev
+        })}
+        onAddEvent={(date) => openCreate('studies', { date })}
+        onToggleTask={toggleDone}
+        compact
+      />
 
       <QuickAddPopover
         open={courseModal !== null}

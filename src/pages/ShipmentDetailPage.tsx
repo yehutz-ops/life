@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useParams, Navigate } from 'react-router-dom'
+import { useParams, Navigate, Link } from 'react-router-dom'
 import BackLink from '../components/BackLink'
 import { useStore } from '../data/StoreContext'
 import { Card, EmptyLine, FilterChip } from '../components/ui'
@@ -52,8 +52,12 @@ const DOC_CATEGORY_LABEL: Record<ShipmentDocCategory, string> = {
   other: 'אחר',
 }
 const TIMELINE_STAGE_LABEL: Record<ShipmentTimelineStage, string> = {
+  rfq_created: 'בקשת הצעת מחיר נוצרה',
+  rfq_pdf_generated: 'מסמך ה-RFQ נוצר',
   rfq_sent: 'בקשת הצעת מחיר נשלחה',
   quote_received: 'התקבלה הצעת מחיר',
+  quote_revised: 'התקבלה הצעה מעודכנת',
+  followup_requested: 'נשלחה בקשת השלמה',
   quote_selected: 'הצעת מחיר נבחרה',
   pickup_booked: 'איסוף תואם',
   collected: 'נאסף',
@@ -274,12 +278,18 @@ export default function ShipmentDetailPage() {
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         {GROUPS.map((g) => (
           <FilterChip key={g.key} active={group === g.key} onClick={() => setGroup(g.key)}>
             {g.label}
           </FilterChip>
         ))}
+        <Link
+          to={`/work/shipments/${shipment.id}/rfq`}
+          className="ms-auto px-4 py-2 rounded-xl bg-amber-800 text-white text-sm font-medium hover:bg-amber-900"
+        >
+          מרכז השוואת הצעות ←
+        </Link>
       </div>
 
       {group === 'overview' && (

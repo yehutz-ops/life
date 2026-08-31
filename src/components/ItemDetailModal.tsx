@@ -3,7 +3,7 @@ import { useDetailModal } from '../data/DetailModalContext'
 import { useStore } from '../data/StoreContext'
 import { useConfirm } from '../data/ConfirmContext'
 import { domainList } from '../data/domains'
-import { DomainId, ItemKind, Priority, ItemStatus, WaitingType, Item, BILL_CATEGORIES } from '../data/types'
+import { DomainId, ItemKind, Priority, ItemStatus, WaitingType, Item, BILL_CATEGORIES, EVENT_SOURCE_LABEL } from '../data/types'
 import { todayISO } from '../utils/date'
 
 const kindOptions: { value: ItemKind; label: string }[] = [
@@ -127,6 +127,9 @@ export default function ItemDetailModal() {
       category: editingItem?.listType === 'bills' ? form.category || undefined : editingItem?.category,
       courseId: form.domain === 'studies' ? form.courseId || undefined : editingItem?.courseId,
       studyKind: form.domain === 'studies' ? form.studyKind || undefined : editingItem?.studyKind,
+      // שמירה/עריכה של פריט היא בעצם "אישור" — אם הפריט חיכה לאישור (נוצר אוטומטית בביטחון בינוני),
+      // השמירה הזו מסירה את הסימון. לא משפיע על פריטים שלא היו מסומנים מלכתחילה.
+      reviewStatus: undefined,
     }
 
     if (target?.mode === 'edit') {
@@ -162,7 +165,19 @@ export default function ItemDetailModal() {
         className="bg-white dark:bg-stone-900 rounded-3xl shadow-xl w-full max-w-md p-6 max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
-        <h3 className="text-lg font-bold mb-4 text-stone-900 dark:text-stone-100">{title}</h3>
+        <div className="flex items-center gap-2 mb-4 flex-wrap">
+          <h3 className="text-lg font-bold text-stone-900 dark:text-stone-100">{title}</h3>
+          {editingItem?.eventSource && editingItem.eventSource !== 'manual' && (
+            <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-stone-100 text-stone-500 dark:bg-stone-800 dark:text-stone-400">
+              מקור: {EVENT_SOURCE_LABEL[editingItem.eventSource]}
+            </span>
+          )}
+          {editingItem?.reviewStatus === 'pending' && (
+            <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-400">
+              נוצר אוטומטית · ממתין לאישור
+            </span>
+          )}
+        </div>
 
         <label className="text-xs text-stone-500 dark:text-stone-400 block mb-1">כותרת</label>
         <input

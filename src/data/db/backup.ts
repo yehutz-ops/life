@@ -6,10 +6,12 @@ import { Campaign, CampaignCreative } from '../campaignTypes'
 import { Shipment, ShipmentQuote, ShipmentDocument, ShipmentTimelineEvent, Forwarder } from '../shipmentTypes'
 import { MediaAsset, IdeaBankItem, ContentPiece, VideoScript, ContentRule, PromotionPlan } from '../contentStudioTypes'
 import { Course, Grade, DegreeRequirementCategory, StudyMaterial } from '../studyTypes'
+import { RfqDispatch, RfqUnmatchedEmail } from '../rfqTypes'
+import { ShipmentInvoice, ShipmentPayment } from '../shipmentFinanceTypes'
 
 interface BackupFile {
   exportedAt: string
-  version: 1 | 2 | 3 | 4 | 5 | 6
+  version: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8
   items: Item[]
   projects: Project[]
   inbox: InboxEntry[]
@@ -42,6 +44,10 @@ interface BackupFile {
   grades?: Grade[]
   degreeRequirementCategories?: DegreeRequirementCategory[]
   studyMaterials?: StudyMaterial[]
+  rfqDispatches?: RfqDispatch[]
+  rfqUnmatchedEmails?: RfqUnmatchedEmail[]
+  shipmentInvoices?: ShipmentInvoice[]
+  shipmentPayments?: ShipmentPayment[]
 }
 
 async function collectBackupData(): Promise<BackupFile> {
@@ -78,6 +84,10 @@ async function collectBackupData(): Promise<BackupFile> {
     grades,
     degreeRequirementCategories,
     studyMaterials,
+    rfqDispatches,
+    rfqUnmatchedEmails,
+    shipmentInvoices,
+    shipmentPayments,
   ] = await Promise.all([
     repository.getAllItems(),
     repository.getAllProjects(),
@@ -111,10 +121,14 @@ async function collectBackupData(): Promise<BackupFile> {
     repository.getAllGrades(),
     repository.getAllDegreeRequirementCategories(),
     repository.getAllStudyMaterials(),
+    repository.getAllRfqDispatches(),
+    repository.getAllRfqUnmatchedEmails(),
+    repository.getAllShipmentInvoices(),
+    repository.getAllShipmentPayments(),
   ])
   return {
     exportedAt: new Date().toISOString(),
-    version: 6,
+    version: 8,
     items,
     projects,
     inbox,
@@ -147,6 +161,10 @@ async function collectBackupData(): Promise<BackupFile> {
     grades,
     degreeRequirementCategories,
     studyMaterials,
+    rfqDispatches,
+    rfqUnmatchedEmails,
+    shipmentInvoices,
+    shipmentPayments,
   }
 }
 
@@ -217,6 +235,10 @@ export async function importBackup(data: BackupFile) {
     ...(data.grades ?? []).map((g) => repository.putGrade(g)),
     ...(data.degreeRequirementCategories ?? []).map((c) => repository.putDegreeRequirementCategory(c)),
     ...(data.studyMaterials ?? []).map((m) => repository.putStudyMaterial(m)),
+    ...(data.rfqDispatches ?? []).map((d) => repository.putRfqDispatch(d)),
+    ...(data.rfqUnmatchedEmails ?? []).map((e) => repository.putRfqUnmatchedEmail(e)),
+    ...(data.shipmentInvoices ?? []).map((i) => repository.putShipmentInvoice(i)),
+    ...(data.shipmentPayments ?? []).map((pm) => repository.putShipmentPayment(pm)),
   ])
   await repository.markSeeded()
 }

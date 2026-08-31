@@ -6,7 +6,8 @@ import { getDomain } from '../data/domains'
 import QuickCaptureBar from '../components/QuickCaptureBar'
 import HomeDomainCard from '../components/HomeDomainCard'
 import InboxBanner from '../components/InboxBanner'
-import WeekCalendar from '../components/hub/WeekCalendar'
+import UnifiedCalendar from '../components/calendar/UnifiedCalendar'
+import { itemsToCalendarEvents } from '../components/calendar/itemAdapter'
 import { ChecklistIcon, CalendarIcon } from '../components/hub/hubIcons'
 import { computeHomeAlerts, HomeAlert } from '../data/homeAlerts'
 import { fetchHomeEmails, HomeEmail } from '../email/recentEmails'
@@ -86,7 +87,7 @@ function timeOfDay(iso: string) {
 
 export default function Home() {
   const { items, inboxEntries, shipments, toggleDone } = useStore()
-  const { openEdit } = useDetailModal()
+  const { openEdit, openCreate } = useDetailModal()
   const today = todayISO()
   const pendingInbox = inboxEntries.filter((e) => e.status === 'pending')
 
@@ -295,8 +296,14 @@ export default function Home() {
         </Panel>
       </div>
 
-      {/* היומן שלי — שבועי, עם רשת שעות */}
-      <WeekCalendar items={calendarItems} onSelect={openEdit} />
+      {/* היומן שלי — היומן המאוחד, אותו רכיב בדיוק כמו בדף /calendar ובכל domain */}
+      <UnifiedCalendar
+        title="היומן שלי"
+        events={itemsToCalendarEvents(calendarItems, openEdit)}
+        onAddEvent={(date) => openCreate(undefined, { date })}
+        onToggleTask={toggleDone}
+        compact
+      />
 
       <InboxBanner count={pendingInbox.length} />
     </div>

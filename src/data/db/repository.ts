@@ -5,6 +5,8 @@ import { Campaign, CampaignCreative } from '../campaignTypes'
 import { Shipment, ShipmentQuote, ShipmentDocument, ShipmentTimelineEvent, Forwarder } from '../shipmentTypes'
 import { MediaAsset, IdeaBankItem, ContentPiece, VideoScript, ContentRule, PromotionPlan } from '../contentStudioTypes'
 import { Course, Grade, DegreeRequirementCategory, StudyMaterial } from '../studyTypes'
+import { RfqDispatch, RfqUnmatchedEmail } from '../rfqTypes'
+import { ShipmentInvoice, ShipmentPayment } from '../shipmentFinanceTypes'
 import { STORES, getAll, put, remove, clearStore, getMeta, setMeta } from './database'
 
 export const repository = {
@@ -136,6 +138,22 @@ export const repository = {
   putStudyMaterial: (material: StudyMaterial) => put(STORES.studyMaterials, material),
   deleteStudyMaterial: (id: string) => remove(STORES.studyMaterials, id),
 
+  getAllRfqDispatches: () => getAll<RfqDispatch>(STORES.rfqDispatches),
+  putRfqDispatch: (d: RfqDispatch) => put(STORES.rfqDispatches, d),
+  deleteRfqDispatch: (id: string) => remove(STORES.rfqDispatches, id),
+
+  getAllRfqUnmatchedEmails: () => getAll<RfqUnmatchedEmail>(STORES.rfqUnmatchedEmails),
+  putRfqUnmatchedEmail: (e: RfqUnmatchedEmail) => put(STORES.rfqUnmatchedEmails, e),
+  deleteRfqUnmatchedEmail: (id: string) => remove(STORES.rfqUnmatchedEmails, id),
+
+  getAllShipmentInvoices: () => getAll<ShipmentInvoice>(STORES.shipmentInvoices),
+  putShipmentInvoice: (i: ShipmentInvoice) => put(STORES.shipmentInvoices, i),
+  deleteShipmentInvoice: (id: string) => remove(STORES.shipmentInvoices, id),
+
+  getAllShipmentPayments: () => getAll<ShipmentPayment>(STORES.shipmentPayments),
+  putShipmentPayment: (p: ShipmentPayment) => put(STORES.shipmentPayments, p),
+  deleteShipmentPayment: (id: string) => remove(STORES.shipmentPayments, id),
+
   clearAll: async () => {
     await clearStore(STORES.items)
     await clearStore(STORES.projects)
@@ -169,6 +187,10 @@ export const repository = {
     await clearStore(STORES.grades)
     await clearStore(STORES.degreeRequirementCategories)
     await clearStore(STORES.studyMaterials)
+    await clearStore(STORES.rfqDispatches)
+    await clearStore(STORES.rfqUnmatchedEmails)
+    await clearStore(STORES.shipmentInvoices)
+    await clearStore(STORES.shipmentPayments)
     await setMeta('seeded', 'true')
   },
 
@@ -187,5 +209,20 @@ export const repository = {
   },
   setEmailSyncState(account: 'work' | 'personal', state: { uidValidity: number; lastUid: number }): Promise<void> {
     return setMeta(`emailSync:${account}`, JSON.stringify(state))
+  },
+
+  // סמן סנכרון נפרד לצינור ה-RFQ. מכוון: הוא קורא את אותה תיבה אך אינו מתחרה בסמן של
+  // מיון תיבת הכניסה הכללית, כך שכל צינור מתקדם בקצב שלו בלי לגזול מיילים מהשני.
+  async getRfqSyncState(account: 'work' | 'personal'): Promise<{ uidValidity: number; lastUid: number } | undefined> {
+    const raw = await getMeta(`rfqEmailSync:${account}`)
+    if (!raw) return undefined
+    try {
+      return JSON.parse(raw)
+    } catch {
+      return undefined
+    }
+  },
+  setRfqSyncState(account: 'work' | 'personal', state: { uidValidity: number; lastUid: number }): Promise<void> {
+    return setMeta(`rfqEmailSync:${account}`, JSON.stringify(state))
   },
 }

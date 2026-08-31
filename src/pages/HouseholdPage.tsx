@@ -8,7 +8,8 @@ import HubSectionHeader from '../components/hub/HubSectionHeader'
 import HubEmptyState from '../components/hub/HubEmptyState'
 import ChecklistPanel from '../components/hub/ChecklistPanel'
 import TaskTileGrid from '../components/hub/TaskTileGrid'
-import MiniDomainCalendar from '../components/hub/MiniDomainCalendar'
+import UnifiedCalendar from '../components/calendar/UnifiedCalendar'
+import { itemsToCalendarEvents } from '../components/calendar/itemAdapter'
 import SearchField from '../components/hub/SearchField'
 import QuickCaptureBar from '../components/QuickCaptureBar'
 import { isOverdue, todayISO } from '../utils/date'
@@ -38,7 +39,7 @@ const MONTH_LABELS = ['ינו', 'פבר', 'מרץ', 'אפר', 'מאי', 'יונ'
 
 export default function HouseholdPage() {
   const { items, addItem, toggleDone, deleteItem } = useStore()
-  const { openEdit } = useDetailModal()
+  const { openEdit, openCreate } = useDetailModal()
   const confirm = useConfirm()
   const [query, setQuery] = useState('')
   const q = query.trim()
@@ -217,7 +218,13 @@ export default function HouseholdPage() {
         />
       </div>
 
-      <MiniDomainCalendar title="יומן הבית" items={homeCalendarItems} />
+      <UnifiedCalendar
+        title="יומן הבית"
+        events={itemsToCalendarEvents(homeCalendarItems, openEdit)}
+        onAddEvent={(date) => openCreate('home', { date })}
+        onToggleTask={toggleDone}
+        compact
+      />
     </DomainHubLayout>
   )
 }

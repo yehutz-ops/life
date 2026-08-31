@@ -7,7 +7,8 @@ import { knowledgeCategories, KnowledgeCategoryId } from '../data/personalKnowle
 import DomainHubLayout from '../components/hub/DomainHubLayout'
 import HubSectionHeader from '../components/hub/HubSectionHeader'
 import HubEmptyState from '../components/hub/HubEmptyState'
-import MiniDomainCalendar from '../components/hub/MiniDomainCalendar'
+import UnifiedCalendar from '../components/calendar/UnifiedCalendar'
+import { itemsToCalendarEvents } from '../components/calendar/itemAdapter'
 import SearchField from '../components/hub/SearchField'
 import QuickCaptureBar from '../components/QuickCaptureBar'
 import { ProgressBar } from '../components/ui'
@@ -95,7 +96,7 @@ function EditorialTile({
 
 export default function PersonalPage() {
   const { items, projects, toggleDone } = useStore()
-  const { openEdit } = useDetailModal()
+  const { openEdit, openCreate } = useDetailModal()
   const [query, setQuery] = useState('')
   const q = query.trim()
   const today = todayISO()
@@ -224,7 +225,13 @@ export default function PersonalPage() {
           </div>
         </div>
 
-        <MiniDomainCalendar title="יומן אישי" items={calendarItems} />
+        <UnifiedCalendar
+          title="יומן אישי"
+          events={itemsToCalendarEvents(calendarItems, openEdit)}
+          onAddEvent={(date) => openCreate('personal', { date })}
+          onToggleTask={toggleDone}
+          compact
+        />
       </div>
     </DomainHubLayout>
   )

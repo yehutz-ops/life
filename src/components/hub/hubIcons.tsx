@@ -220,3 +220,92 @@ export function WalletIcon(props: IconProps) {
     </Base>
   )
 }
+
+// אייקוני ניווט — נוספו עבור הסיידבר המחודש (GraduationCap ל"לימודים", Chart ל"לוח כספים", Search/Settings
+// ל-Utilities התחתונות, Chevron למתג ה-accordion). אותה שפה קווית מינימלית כמו שאר האייקונים בקובץ.
+export function GraduationCapIcon(props: IconProps) {
+  return (
+    <Base {...props}>
+      <path d="M12 5 2.5 9.5 12 14l9.5-4.5Z" />
+      <path d="M6.5 11.8V16c0 1.4 2.5 2.8 5.5 2.8s5.5-1.4 5.5-2.8v-4.2" />
+      <path d="M21.5 9.5v5.2" />
+    </Base>
+  )
+}
+
+export function ChartIcon(props: IconProps) {
+  return (
+    <Base {...props}>
+      <path d="M4 20V10" />
+      <path d="M10 20V4" />
+      <path d="M16 20v-7" />
+      <path d="M3 20h18" />
+    </Base>
+  )
+}
+
+export function SearchIcon(props: IconProps) {
+  return (
+    <Base {...props}>
+      <circle cx="10.8" cy="10.8" r="6.3" />
+      <path d="M20 20l-4.6-4.6" />
+    </Base>
+  )
+}
+
+export function SettingsIcon(props: IconProps) {
+  return (
+    <Base {...props}>
+      <circle cx="12" cy="12" r="2.8" />
+      <path d="M12 3.5v2.2M12 18.3v2.2M20.5 12h-2.2M5.7 12H3.5M17.8 6.2l-1.5 1.5M7.7 16.3l-1.5 1.5M17.8 17.8l-1.5-1.5M7.7 7.7 6.2 6.2" />
+    </Base>
+  )
+}
+
+export function ChevronDownIcon(props: IconProps) {
+  return (
+    <Base {...props}>
+      <path d="M6 9.5 12 15l6-5.5" />
+    </Base>
+  )
+}
+
+export function MailIcon(props: IconProps) {
+  return (
+    <Base {...props}>
+      <path d="M4 6.5h16A1 1 0 0 1 21 7.5v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1Z" />
+      <path d="m4 7.5 8 6.2 8-6.2" />
+    </Base>
+  )
+}
+
+// שלושה אייקונים נוספים — הושלמו בעקבות השוואה חוזרת לתמונת הרפרנס של הסיידבר: קליפ-בורד ל"מטלות
+// וציונים" (נבדל מ-ChecklistIcon של "משימות"), עלה ל"התפתחות אישית", עגלת קניות ל"רשימת קניות".
+export function ClipboardIcon(props: IconProps) {
+  return (
+    <Base {...props}>
+      <rect x="5.5" y="4.5" width="13" height="16" rx="1.8" />
+      <rect x="9" y="3" width="6" height="3" rx="1" fill="currentColor" stroke="none" />
+      <path d="M8.5 11h7M8.5 14.2h7M8.5 17.4h4.5" />
+    </Base>
+  )
+}
+
+export function LeafIcon(props: IconProps) {
+  return (
+    <Base {...props}>
+      <path d="M6 18c-1.2-6.5 2.7-11.5 12-12.5C19 14.5 14.2 18.5 6 18Z" />
+      <path d="M6.5 17.5 15 9" />
+    </Base>
+  )
+}
+
+export function CartIcon(props: IconProps) {
+  return (
+    <Base {...props}>
+      <path d="M3.5 4.5h2l2.1 10.4a1.6 1.6 0 0 0 1.6 1.3h7.3a1.6 1.6 0 0 0 1.6-1.3L20 8.5H7" />
+      <circle cx="9.5" cy="19.5" r="1.1" fill="currentColor" stroke="none" />
+      <circle cx="16.5" cy="19.5" r="1.1" fill="currentColor" stroke="none" />
+    </Base>
+  )
+}
